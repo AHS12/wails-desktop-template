@@ -4,6 +4,13 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
+// Optional features reach the shell through shell/feature.ts, so deleting one's
+// folder can't break what's left.
+const FEATURE_IMPORTS = {
+    group: ['**/features', '**/features/*', '**/features/**'],
+    message: 'Register what a feature adds in shell/feature.ts instead of importing it.',
+}
+
 export default tseslint.config(
     {
         ignores: ['dist', 'node_modules'],
@@ -36,10 +43,8 @@ export default tseslint.config(
         },
     },
     {
-        // Pure code stays free of UI and desktop dependencies, so it can be tested
-        // alone. The command list still reads the stores until it moves to the shell.
+        // Pure code stays free of UI and desktop dependencies, so it can be tested alone.
         files: ['src/core/**/*.ts'],
-        ignores: ['src/core/commands/commands.ts'],
         rules: {
             'no-restricted-imports': ['error', {
                 patterns: [
@@ -51,7 +56,19 @@ export default tseslint.config(
                         group: ['@wailsio/*', '**/platform/*'],
                         message: 'Code in core/ must not depend on the desktop shell.',
                     },
+                    FEATURE_IMPORTS,
                 ],
+            }],
+        },
+    },
+    {
+        // Optional features are removed by deleting their folder, so nothing outside
+        // features/ may import one. core/ has the same rule in its own block above.
+        files: ['src/{app,components,platform,shell,store}/**/*.{ts,tsx}'],
+        ignores: ['**/*.test.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': ['error', {
+                patterns: [FEATURE_IMPORTS],
             }],
         },
     },

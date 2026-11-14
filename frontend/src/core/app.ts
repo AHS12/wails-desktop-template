@@ -12,6 +12,8 @@ export const APP = {
     id: config.id,
     /** Where updates, issues and the changelog live: owner/name on GitHub. */
     repository: config.repository,
+    /** Who makes it, for About. */
+    company: config.company,
     version: config.version,
 } as const
 

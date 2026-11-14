@@ -5,16 +5,9 @@
 
 import {create} from 'zustand'
 import {settingValue} from './settings-store'
-import type {ReportKind} from '../core/feedback/report-forms'
 
-/** What someone has typed into Report a problem so far. */
-export interface ReportDraft {
-    readonly kind: ReportKind
-    readonly title: string
-    readonly fields: Readonly<Record<string, string>>
-}
-
-export type SettingsPageId = 'General' | 'Appearance' | 'Keyboard' | 'Storage' | 'Backup' | 'Recently removed' | 'About'
+/** A page of Settings, by the name in its side list. Features add pages of their own. */
+export type SettingsPageId = string
 
 export interface ConfirmRequest {
     readonly title: string
@@ -37,21 +30,22 @@ interface UiStore {
     openSettings(page?: SettingsPageId): void
     closeSettings(): void
 
-    tourOpen: boolean
-    setTourOpen(open: boolean): void
-
     whatsNewOpen: boolean
     setWhatsNewOpen(open: boolean): void
 
-    /** True while Report a problem is open. */
-    reportOpen: boolean
-    setReportOpen(open: boolean): void
-    /** What was typed into Report a problem, kept until it's sent or the app closes, so a stray click loses nothing. */
-    reportDraft: ReportDraft | null
-    setReportDraft(draft: ReportDraft | null): void
-
     confirm: ConfirmRequest | null
     askConfirm(request: ConfirmRequest | null): void
+
+    /**
+     * Features showing a person something first, such as the tour on a first start.
+     * What's new waits until none is.
+     */
+    holds: Readonly<Record<string, boolean>>
+    setHold(feature: string, holding: boolean): void
+
+    /** True once the close is agreed, while features finish what they must first. */
+    closing: boolean
+    setClosing(closing: boolean): void
 }
 
 /** Whether someone's system or Settings asks for less movement on screen. */
@@ -67,17 +61,15 @@ export const useUiStore = create<UiStore>((set) => ({
     openSettings: (page = 'General') => set({settingsPage: page, paletteOpen: false}),
     closeSettings: () => set({settingsPage: null}),
 
-    tourOpen: false,
-    setTourOpen: (tourOpen) => set({tourOpen}),
-
     whatsNewOpen: false,
     setWhatsNewOpen: (whatsNewOpen) => set({whatsNewOpen}),
 
-    reportOpen: false,
-    setReportOpen: (reportOpen) => set({reportOpen, paletteOpen: false}),
-    reportDraft: null,
-    setReportDraft: (reportDraft) => set({reportDraft}),
-
     confirm: null,
     askConfirm: (confirm) => set({confirm}),
+
+    holds: {},
+    setHold: (feature, holding) => set((state) => (state.holds[feature] === holding ? state : {holds: {...state.holds, [feature]: holding}})),
+
+    closing: false,
+    setClosing: (closing) => set({closing}),
 }))

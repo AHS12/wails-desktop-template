@@ -1,30 +1,24 @@
 import {useEffect, useState} from 'react'
-import {commandForKeys, runCommand, shortcutOf} from '../core/commands/commands'
+import {commandForKeys, runCommand, shortcutOf} from '../shell/commands'
 import {applyTheme, resolveTheme, watchSystemTheme, type ThemeChoice} from '../core/settings/theme'
 import {NoteEditor} from '../example/NoteEditor'
-import {CloseDialog} from '../panels/CloseDialog'
-import {CommandPalette} from '../panels/CommandPalette'
-import {ConfirmDialog} from '../panels/ConfirmDialog'
-import {ClosingDialog} from '../panels/ClosingDialog'
-import {CloudSetupDialog} from '../panels/CloudSetupDialog'
-import {RestoreDialog} from '../panels/RestoreDialog'
-import {clearHolding} from '../platform/backup'
-import {MenuBar} from '../panels/MenuBar'
-import {ReportDialog} from '../panels/ReportDialog'
-import {SaveDialog} from '../panels/SaveDialog'
-import {SettingsDialog} from '../panels/SettingsDialog'
-import {StatusBar} from '../panels/StatusBar'
-import {Toast} from '../panels/Toast'
-import {Tour} from '../panels/Tour'
-import {WhatsNewDialog} from '../panels/WhatsNewDialog'
-import {DocumentsPage} from '../pages/DocumentsPage'
-import {HomePage} from '../pages/HomePage'
+import {CloseDialog} from '../shell/CloseDialog'
+import {CommandPalette} from '../shell/CommandPalette'
+import {ConfirmDialog} from '../shell/ConfirmDialog'
+import {features} from '../shell/feature'
+import {MenuBar} from '../shell/MenuBar'
+import {SaveDialog} from '../shell/SaveDialog'
+import {SettingsDialog} from '../shell/SettingsDialog'
+import {StatusBar} from '../shell/StatusBar'
+import {Toast} from '../shell/Toast'
+import {WhatsNewDialog} from '../shell/WhatsNewDialog'
+import {DocumentsPage} from '../shell/pages/DocumentsPage'
+import {HomePage} from '../shell/pages/HomePage'
 import {forgetOldRemovedDocuments} from '../platform/documents'
 import {hasUnsavedChanges, isHomePage, useDocumentStore} from '../store/document-store'
 import {setUnsaved} from '../platform/draft'
 import {setCloseToTray, setMinimiseToTray} from '../platform/window'
 import {confirmClose, onCloseRequested} from '../platform/close-guard'
-import {useBackupStore} from '../store/backup-store'
 import {cancelUpdateInstall} from '../platform/update'
 import {settingNumber, settingValue, uiScale, useSettingsStore} from '../store/settings-store'
 import {useUiStore} from '../store/ui-store'
@@ -37,8 +31,10 @@ const FIELD_KEYS = new Set(['undo', 'redo'])
 /** How long after start the weekly update check waits. */
 const UPDATE_CHECK_DELAY_MS = 5000
 
-/** A few seconds after start, so the first screen settles before any backup reads the disk. */
-const STARTUP_BACKUP_DELAY_MS = 3000
+/** Runs every feature's work that has to be done before closing, such as a backup that is due. */
+async function finishBeforeClosing(): Promise<void> {
+    await Promise.allSettled(features().map((feature) => feature.beforeClose?.()))
+}
 
 /** Applies what the document element carries: theme, scale and motion. */
 function applyAppearance() {
@@ -68,18 +64,13 @@ export function App() {
     const page = useDocumentStore((state) => state.page)
     const [closeRequested, setCloseRequested] = useState(false)
 
-    // The shell cancels the close when work is unsaved, or a backup may be due,
-    // and tells us. The question is ours to ask, in our own voice; with nothing
-    // unsaved there's no question, only the backup.
-    const [closing, setClosing] = useState(false)
-
-    const closeAfterBackup = () => {
+    // The shell cancels the close when work is unsaved, or a feature is busy, and
+    // tells us. The question is ours to ask, in our own voice; with nothing unsaved
+    // there's no question, only the work to finish.
+    const closeWhenFinished = () => {
         setCloseRequested(false)
-        setClosing(true)
-        void useBackupStore
-            .getState()
-            .backUpBeforeClosing()
-            .finally(() => void confirmClose())
+        useUiStore.getState().setClosing(true)
+        void finishBeforeClosing().finally(() => void confirmClose())
     }
 
     useEffect(
@@ -88,7 +79,7 @@ export function App() {
                 if (hasUnsavedChanges(useDocumentStore.getState())) {
                     setCloseRequested(true)
                 } else {
-                    closeAfterBackup()
+                    closeWhenFinished()
                 }
             }),
         [],
@@ -119,7 +110,7 @@ export function App() {
             }
 
             // A question on screen owns the keyboard, and so do the windows.
-            if (documents.savePrompt || closeRequested || ui.confirm || ui.tourOpen || ui.whatsNewOpen || ui.reportOpen || ui.settingsPage) {
+            if (documents.savePrompt || closeRequested || ui.confirm || ui.whatsNewOpen || ui.settingsPage || features().some((feature) => feature.ownsKeyboard?.())) {
                 return
             }
 
@@ -163,7 +154,7 @@ export function App() {
         })
         const unwatch = watchSystemTheme(applyAppearance)
         let updateTimer: number | undefined
-        let backupTimer: number | undefined
+        let stopFeatures: (() => void)[] = []
 
         // Settings from the file win over the copy the first paint used.
         void useSettingsStore
@@ -177,8 +168,6 @@ export function App() {
 
                 // Only now does Go know which folder the documents are in.
                 void forgetOldRemovedDocuments().catch(() => undefined)
-                // Whatever a restore left unpacked when the app last closed.
-                void clearHolding().catch(() => undefined)
 
                 if (values.startOn === 'last' && lastDocumentId) {
                     void useDocumentStore.getState().open(lastDocumentId)
@@ -187,29 +176,16 @@ export function App() {
                 // After the first screen has settled, so it never slows the start.
                 updateTimer = window.setTimeout(() => checkForUpdatesIfDue(), UPDATE_CHECK_DELAY_MS)
 
-                // Catches changes from a session that closed before its backup ran.
-                void useBackupStore.getState().refreshBackupDue()
-                backupTimer = window.setTimeout(() => void useBackupStore.getState().runAutoBackups(), STARTUP_BACKUP_DELAY_MS)
+                stopFeatures = features().flatMap((feature) => feature.start?.() ?? [])
             })
 
         return () => {
             unsubscribe()
             unwatch()
             window.clearTimeout(updateTimer)
-            window.clearTimeout(backupTimer)
+            stopFeatures.forEach((stop) => stop())
         }
     }, [])
-
-    // A save, rename or removal: back up a minute after the last one.
-    useEffect(
-        () =>
-            useDocumentStore.subscribe((state, previous) => {
-                if (state.documents !== previous.documents) {
-                    useBackupStore.getState().scheduleBackups()
-                }
-            }),
-        [],
-    )
 
     // Remembers the document in hand, for "Start on: last document".
     useEffect(
@@ -273,12 +249,9 @@ export function App() {
         <div className="app-shell">
             <MenuBar home={isHomePage(page)} />
             {page === 'home' ? <HomePage /> : page === 'documents' ? <DocumentsPage /> : <Editor />}
-            <Tour />
+            {features().flatMap(({id, dialogs = []}) => dialogs.map((Dialog, index) => <Dialog key={`${id}-${index}`} />))}
             <Toast />
             <SaveDialog />
-            <ReportDialog />
-            <RestoreDialog />
-            <CloudSetupDialog />
             <SettingsDialog />
             <ConfirmDialog />
             <WhatsNewDialog />
@@ -288,10 +261,9 @@ export function App() {
                         setCloseRequested(false)
                         void cancelUpdateInstall()
                     }}
-                    onClose={closeAfterBackup}
+                    onClose={closeWhenFinished}
                 />
             ) : null}
-            {closing ? <ClosingDialog /> : null}
             <CommandPalette />
             <div className="visually-hidden" role="status" aria-live="polite">
                 {announcement}

@@ -2,7 +2,11 @@ import React from 'react'
 import {createRoot} from 'react-dom/client'
 import './styles/app.css'
 import {App} from './app/App'
+import {FEATURES} from './features'
 import {connectShell} from './platform/shell'
+import {registerFeatures} from './shell/feature'
+
+registerFeatures(FEATURES)
 
 const container = document.getElementById('root')
 

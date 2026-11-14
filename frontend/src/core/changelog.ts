@@ -59,8 +59,8 @@ export function whatsNewDue(state: {
     readonly wanted: boolean
     readonly seenVersion: string
     readonly version: string
-    readonly tourSeen: boolean
-    readonly tourOpen: boolean
+    /** Something else is being shown first, such as the tour on a first start. */
+    readonly waiting: boolean
 }): boolean {
-    return state.loaded && state.wanted && state.seenVersion !== state.version && state.tourSeen && !state.tourOpen
+    return state.loaded && state.wanted && state.seenVersion !== state.version && !state.waiting
 }
