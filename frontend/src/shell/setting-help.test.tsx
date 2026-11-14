@@ -1,5 +1,6 @@
 import {act, cleanup, render, screen} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it} from 'vitest'
+import {APP} from '../core/app'
 import {useSettingsStore} from '../store/settings-store'
 import {useUiStore} from '../store/ui-store'
 import {SettingsDialog} from './SettingsDialog'
@@ -18,7 +19,7 @@ describe('a choice with its own help', () => {
     it('explains the choice that is made, and changes with it', () => {
         render(<SettingsDialog />)
 
-        expect(screen.getByText(/Closing the window quits wails-desktop-template/)).toBeTruthy()
+        expect(screen.getByText(`Closing the window quits ${APP.name}`, {exact: false})).toBeTruthy()
         expect(screen.getByText(/Minimising puts the window on the taskbar/)).toBeTruthy()
 
         act(() => {
@@ -28,6 +29,6 @@ describe('a choice with its own help', () => {
 
         expect(screen.getByText(/Closing the window hides it/)).toBeTruthy()
         expect(screen.getByText(/Minimising hides the window/)).toBeTruthy()
-        expect(screen.queryByText(/Closing the window quits wails-desktop-template/)).toBeNull()
+        expect(screen.queryByText(`Closing the window quits ${APP.name}`, {exact: false})).toBeNull()
     })
 })

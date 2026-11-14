@@ -29,10 +29,10 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"wails-desktop-template/backend/documents"
-	"wails-desktop-template/backend/fsutil"
 
 	"wails-desktop-template/appconfig"
+	"wails-desktop-template/backend/documents"
+	"wails-desktop-template/backend/fsutil"
 )
 
 const (

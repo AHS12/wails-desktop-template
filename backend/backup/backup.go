@@ -30,12 +30,12 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"wails-desktop-template/appconfig"
 	"wails-desktop-template/backend"
 	"wails-desktop-template/backend/documents"
 	"wails-desktop-template/backend/fsutil"
 	"wails-desktop-template/backend/secrets"
-
-	"wails-desktop-template/appconfig"
 )
 
 const (

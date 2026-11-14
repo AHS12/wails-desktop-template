@@ -13,6 +13,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/format"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -177,6 +178,16 @@ func rename(args []string) error {
 		}
 
 		if text != string(data) {
+			// A new module name can sort its imports differently.
+			if strings.HasSuffix(file, ".go") {
+				formatted, err := format.Source([]byte(text))
+				if err != nil {
+					return fmt.Errorf("%s: %w", file, err)
+				}
+
+				text = string(formatted)
+			}
+
 			if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 				return err
 			}

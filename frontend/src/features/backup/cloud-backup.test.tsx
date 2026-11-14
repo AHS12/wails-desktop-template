@@ -1,5 +1,6 @@
 import {cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {APP} from '../../core/app'
 import {DEFAULT_CLOUD_BACKUP} from '../../core/settings/settings-spec'
 import {CLOUD_WRONG_KEYS, useBackupStore} from './backup-store'
 import {useDocumentStore} from '../../store/document-store'
@@ -77,7 +78,7 @@ describe('setting up cloud backup', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Check the connection'}))
 
-        await screen.findByText(/Connected\. wails-desktop-template can read and write in my-bucket\/wails-desktop-template\//)
+        await screen.findByText(`Connected. ${APP.name} can read and write in my-bucket/${APP.id}/`, {exact: false})
         expect(app.SetCloudKeys).toHaveBeenCalledWith('id-123', 'very secret')
         expect(app.CheckCloudBackup).toHaveBeenCalledWith({
             service: 'r2',
@@ -161,7 +162,7 @@ describe('backing up to the cloud', () => {
         await useBackupStore.getState().backUpToCloudNow()
 
         expect(useBackupStore.getState().cloudProblem).toBe(
-            "wails-desktop-template couldn't reach abc.r2.cloudflarestorage.com. Check the address and your internet connection.",
+            `${APP.name} couldn't reach abc.r2.cloudflarestorage.com. Check the address and your internet connection.`,
         )
     })
 
