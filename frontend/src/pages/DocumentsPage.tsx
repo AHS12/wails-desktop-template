@@ -13,7 +13,7 @@ import {Select} from '../components/controls'
 import {APP} from '../core/app'
 import {groupByTime, matchesSearch, sortDocuments, type DocumentSort} from '../core/library/document-summary'
 import type {SavedDocument} from '../platform/documents'
-import {cloudPropStatus, type CloudPropStatus} from '../platform/backup'
+import {cloudDocumentStatus, type CloudDocumentStatus} from '../platform/backup'
 import {cloudTargetOf} from '../store/backup-store'
 import {documentType, useDocumentStore} from '../store/document-store'
 import {useSettingsStore} from '../store/settings-store'
@@ -43,7 +43,7 @@ const dateLabel = (iso: string | null): string | null => {
 const sizeLabel = (bytes: number): string =>
     bytes < 1024 ? `${bytes} bytes` : bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
-const BACKUP_LABELS: Readonly<Record<CloudPropStatus, string>> = {
+const BACKUP_LABELS: Readonly<Record<CloudDocumentStatus, string>> = {
     'backed-up': 'Backed up to the cloud',
     changed: 'Changed since the last backup',
     'not-yet': 'Not backed up yet',
@@ -53,9 +53,9 @@ const BACKUP_LABELS: Readonly<Record<CloudPropStatus, string>> = {
  * Whether the document is in the cloud backup as it is now, or null when there's no
  * cloud backup to ask about. Asked again when it's saved or a backup ends.
  */
-function useCloudStatus(document: SavedDocument): CloudPropStatus | null {
+function useCloudStatus(document: SavedDocument): CloudDocumentStatus | null {
     const cloud = useSettingsStore((state) => state.cloudBackup)
-    const [status, setStatus] = useState<CloudPropStatus | null>(null)
+    const [status, setStatus] = useState<CloudDocumentStatus | null>(null)
     const readable = document.kind !== null
 
     useEffect(() => {
@@ -66,7 +66,7 @@ function useCloudStatus(document: SavedDocument): CloudPropStatus | null {
             return
         }
 
-        void cloudPropStatus(cloudTargetOf(cloud), document.id).then(
+        void cloudDocumentStatus(cloudTargetOf(cloud), document.id).then(
             (next) => current && setStatus(next),
             () => current && setStatus(null),
         )

@@ -17,7 +17,7 @@ beforeEach(() => {
         FolderExists: vi.fn(async () => true),
         BackUpToFile: vi.fn(async () => ({props: 3, bytes: 100})),
         PruneFolderBackups: vi.fn(async () => 0),
-        SetBackupDue: vi.fn(async () => undefined),
+        SetBusy: vi.fn(async () => undefined),
         StopBackup: vi.fn(async () => undefined),
         WriteSettings: vi.fn(async () => undefined),
     }
@@ -40,7 +40,7 @@ describe('backing up to a folder by itself', () => {
         expect(app.PruneFolderBackups).toHaveBeenCalledWith('D:\\Backups', 5)
         expect(useSettingsStore.getState().folderBackup.lastDay).toBe(localDay(new Date()))
         // Written today, so closing no longer needs to wait for one.
-        expect(app.SetBackupDue).toHaveBeenLastCalledWith(false)
+        expect(app.SetBusy).toHaveBeenLastCalledWith('')
     })
 
     it('writes at most one backup a day, even after more changes', async () => {

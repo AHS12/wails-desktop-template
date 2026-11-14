@@ -18,19 +18,19 @@ function fakeBin() {
     return {
         bin,
         saved,
-        ListRemovedProps: vi.fn(async () =>
+        ListRemovedDocuments: vi.fn(async () =>
             [...bin.keys()].map((id) => ({id, savedAt: '2026-11-01T10:00:00Z', removedAt: '2026-11-04T09:00:00Z', size: 1, hasPicture: false})),
         ),
-        ReadRemovedProp: vi.fn(async (id: string) => [...new TextEncoder().encode(bin.get(id) ?? '')]),
-        PutBackProp: vi.fn(async (id: string) => {
+        ReadRemovedDocument: vi.fn(async (id: string) => [...new TextEncoder().encode(bin.get(id) ?? '')]),
+        PutBackDocument: vi.fn(async (id: string) => {
             bin.delete(id)
             saved.add(id)
         }),
-        ForgetRemovedProp: vi.fn(async (id: string) => void bin.delete(id)),
-        ListProps: vi.fn(async () => []),
-        ReadPropsIndex: vi.fn(async () => null),
-        WritePropsIndex: vi.fn(async () => undefined),
-        GetLibraryInfo: vi.fn(async () => ({folder: 'C:/notes', props: 0, bytes: 0})),
+        ForgetRemovedDocument: vi.fn(async (id: string) => void bin.delete(id)),
+        ListDocuments: vi.fn(async () => []),
+        ReadDocumentsIndex: vi.fn(async () => null),
+        WriteDocumentsIndex: vi.fn(async () => undefined),
+        GetLibraryInfo: vi.fn(async () => ({folder: 'C:/notes', documents: 0, bytes: 0})),
         ReadSettings: vi.fn(async () => null),
         WriteSettings: vi.fn(async () => undefined),
     }
@@ -73,11 +73,11 @@ describe('Recently removed in Settings', () => {
 
         fireEvent.click(await screen.findByRole('button', {name: 'Remove Recipes for good'}))
 
-        expect(app.ForgetRemovedProp).not.toHaveBeenCalled()
+        expect(app.ForgetRemovedDocument).not.toHaveBeenCalled()
 
         fireEvent.click(within(screen.getByRole('group', {name: /Remove “Recipes” for good/})).getByRole('button', {name: 'Remove for good'}))
 
-        await waitFor(() => expect(app.ForgetRemovedProp).toHaveBeenCalledWith('recipes'))
+        await waitFor(() => expect(app.ForgetRemovedDocument).toHaveBeenCalledWith('recipes'))
     })
 
     it('removes everything for good after asking', async () => {

@@ -13,7 +13,7 @@ function leavePicturesToGo(): Plugin {
         name: 'leave-pictures-to-go',
         apply: 'serve',
         configureServer(server) {
-            server.middlewares.use('/your-props/', (_request, response) => {
+            server.middlewares.use('/documents/', (_request, response) => {
                 response.statusCode = 404
                 response.end()
             })

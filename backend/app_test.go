@@ -374,7 +374,7 @@ func TestClosingADialogIsNotAnError(t *testing.T) {
 		t.Fatalf("chosenPath(failure) = %v, want the failure passed on", err)
 	}
 
-	if path, err := chosenPath(`C:\props\oak.json`, nil); path != `C:\props\oak.json` || err != nil {
+	if path, err := chosenPath(`C:\documents\oak.json`, nil); path != `C:\documents\oak.json` || err != nil {
 		t.Fatalf("chosenPath(picked) = %q, %v, want the path", path, err)
 	}
 }

@@ -20,24 +20,24 @@ beforeEach(() => {
         }),
         ForgetCloudKeys: vi.fn(async () => undefined),
         LibraryFingerprint: vi.fn(async () => 'props'),
-        SetBackupDue: vi.fn(async () => undefined),
+        SetBusy: vi.fn(async () => undefined),
         CheckCloudBackup: vi.fn(async () => undefined),
-        BackUpToCloud: vi.fn(async () => ({props: 23, uploaded: 2, changedElsewhere: 0, removed: 0})),
+        BackUpToCloud: vi.fn(async () => ({documents: 23, uploaded: 2, changedElsewhere: 0, removed: 0})),
         OpenCloudBackup: vi.fn(async () => ({
             app: '0.4.0',
             madeAt: '2026-11-04T10:00:00Z',
             palettes: '',
-            props: [
+            documents: [
                 {id: 'shop', savedAt: '2026-11-01T10:00:00Z', size: 1, hasPicture: false, status: 'new'},
                 {id: 'gone', savedAt: '2026-10-01T10:00:00Z', size: 1, hasPicture: false, status: 'removed'},
             ],
         })),
-        ReadHeldProp: vi.fn(async (id: string) => [...new TextEncoder().encode(JSON.stringify({name: id === 'shop' ? 'Shopping' : 'Old ideas', kind: 'note', content: {text: ''}}))]),
+        ReadHeldDocument: vi.fn(async (id: string) => [...new TextEncoder().encode(JSON.stringify({name: id === 'shop' ? 'Shopping' : 'Old ideas', kind: 'note', content: {text: ''}}))]),
         RestoreFromHolding: vi.fn(async (choices: unknown[]) => choices.length),
         ClearHolding: vi.fn(async () => undefined),
-        ListProps: vi.fn(async () => []),
-        ReadPropsIndex: vi.fn(async () => null),
-        WritePropsIndex: vi.fn(async () => undefined),
+        ListDocuments: vi.fn(async () => []),
+        ReadDocumentsIndex: vi.fn(async () => null),
+        WriteDocumentsIndex: vi.fn(async () => undefined),
         WriteSettings: vi.fn(async () => undefined),
     }
     fakeDesktop(app)
@@ -146,7 +146,7 @@ describe('backing up to the cloud', () => {
     })
 
     it('says when documents were left as another computer saved them', async () => {
-        app.BackUpToCloud.mockResolvedValue({props: 23, uploaded: 0, changedElsewhere: 1, removed: 0})
+        app.BackUpToCloud.mockResolvedValue({documents: 23, uploaded: 0, changedElsewhere: 1, removed: 0})
 
         await useBackupStore.getState().backUpToCloudNow()
 

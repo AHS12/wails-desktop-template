@@ -12,7 +12,7 @@ const held = {
     app: '0.4.0',
     madeAt: '2026-11-01T10:00:00Z',
     palettes: '',
-    props: [
+    documents: [
         {id: 'ideas', savedAt: '2026-10-01T10:00:00Z', size: 10, hasPicture: false, status: 'new'},
         {id: 'shop', savedAt: '2026-10-02T10:00:00Z', size: 10, hasPicture: false, status: 'different'},
         {id: 'recipes', savedAt: '2026-10-03T10:00:00Z', size: 10, hasPicture: false, status: 'same'},
@@ -28,14 +28,14 @@ beforeEach(() => {
         OpenFileDialog: vi.fn(async () => 'C:/backups/my-backup.zip'),
         SaveFileDialog: vi.fn(async () => 'C:/backups/my-backup.zip'),
         OpenBackupFile: vi.fn(async () => held),
-        ReadHeldProp: vi.fn(async (id: string) => [...new TextEncoder().encode(noteText(names[id]))]),
+        ReadHeldDocument: vi.fn(async (id: string) => [...new TextEncoder().encode(noteText(names[id]))]),
         RestoreFromHolding: vi.fn(async (choices: unknown[]) => choices.length),
         ClearHolding: vi.fn(async () => undefined),
-        BackUpToFile: vi.fn(async () => ({props: 3, bytes: 100})),
+        BackUpToFile: vi.fn(async () => ({documents: 3, bytes: 100})),
         StopBackup: vi.fn(async () => undefined),
-        ListProps: vi.fn(async () => []),
-        ReadPropsIndex: vi.fn(async () => null),
-        WritePropsIndex: vi.fn(async () => undefined),
+        ListDocuments: vi.fn(async () => []),
+        ReadDocumentsIndex: vi.fn(async () => null),
+        WriteDocumentsIndex: vi.fn(async () => undefined),
         WriteSettings: vi.fn(async () => undefined),
     }
     fakeDesktop(app)

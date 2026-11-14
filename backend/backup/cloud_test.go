@@ -1,4 +1,4 @@
-package backend
+package backup
 
 import (
 	"context"
@@ -16,31 +16,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"wails-desktop-template/backend/secrets"
 )
-
-// memorySecrets keeps keys in memory, so no test touches the real keychain.
-type memorySecrets struct {
-	keys  cloudKeys
-	saved bool
-}
-
-func (m *memorySecrets) load() (cloudKeys, error) {
-	if !m.saved {
-		return cloudKeys{}, errCloudNoKeys
-	}
-
-	return m.keys, nil
-}
-
-func (m *memorySecrets) save(keys cloudKeys) error {
-	m.keys, m.saved = keys, true
-	return nil
-}
-
-func (m *memorySecrets) forget() error {
-	m.keys, m.saved = cloudKeys{}, false
-	return nil
-}
 
 type storedObject struct {
 	body []byte
@@ -122,21 +100,24 @@ func (b *fakeBucket) takePuts() []string {
 	return puts
 }
 
-var testTarget = CloudTarget{Service: "r2", Endpoint: "abc.r2.cloudflarestorage.com", Region: "auto", Bucket: "props", Folder: "wails-desktop-template"}
+var testTarget = CloudTarget{Service: "r2", Endpoint: "abc.r2.cloudflarestorage.com", Region: "auto", Bucket: "notes", Folder: "wails-desktop-template"}
 
-// newCloudApp is a computer with its own saved props, settings and keys,
+// newCloudApp is a computer with its own saved documents, settings and keys,
 // backing up to bucket.
-func newCloudApp(t *testing.T, bucket *fakeBucket) *App {
+func newCloudApp(t *testing.T, bucket *fakeBucket) *testApp {
 	t.Helper()
 
 	app := newBackupApp(t)
-	app.secrets = &memorySecrets{keys: cloudKeys{AccessKey: "id", SecretKey: "secret"}, saved: true}
+	if err := app.SetCloudKeys("id", "secret"); err != nil {
+		t.Fatal(err)
+	}
+
 	app.cloudStoreFor = func(CloudTarget, cloudKeys) (objectStore, error) { return bucket, nil }
 
 	return app
 }
 
-func backUp(t *testing.T, app *App) CloudSummary {
+func backUp(t *testing.T, app *testApp) CloudSummary {
 	t.Helper()
 
 	summary, err := app.BackUpToCloud(testTarget, []byte(`[]`), "0.4.0")
@@ -154,16 +135,16 @@ func TestTheFirstCloudBackupUploadsEverything(t *testing.T) {
 
 	summary := backUp(t, app)
 
-	want := []string{"wails-desktop-template/backup.json", "wails-desktop-template/palettes.json", "wails-desktop-template/props/oak.json", "wails-desktop-template/props/oak.png"}
+	want := []string{"wails-desktop-template/backup.json", "wails-desktop-template/documents/oak.json", "wails-desktop-template/documents/oak.png", "wails-desktop-template/extras.json"}
 	if got := bucket.takePuts(); !slices.Equal(got, want) {
 		t.Fatalf("puts = %v, want %v", got, want)
 	}
 
-	if summary.Props != 1 || summary.Uploaded != 2 {
+	if summary.Documents != 1 || summary.Uploaded != 2 {
 		t.Fatalf("summary = %+v", summary)
 	}
 
-	meta := bucket.objects["wails-desktop-template/props/oak.json"].meta
+	meta := bucket.objects["wails-desktop-template/documents/oak.json"].meta
 	if len(meta[metaSHA256]) != 64 || meta[metaSavedAt] == "" {
 		t.Fatalf("metadata = %v", meta)
 	}
@@ -195,26 +176,26 @@ func TestChangingOnePropUploadsOnlyItAndTheList(t *testing.T) {
 	backUp(t, app)
 	bucket.takePuts()
 
-	if err := app.WriteProp("oak", []byte(`{"name":"oak, taller"}`), nil); err != nil {
+	if err := app.WriteDocument("oak", []byte(`{"name":"oak, taller"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
 	backUp(t, app)
 
-	want := []string{"wails-desktop-template/backup.json", "wails-desktop-template/props/oak.json"}
+	want := []string{"wails-desktop-template/backup.json", "wails-desktop-template/documents/oak.json"}
 	if got := bucket.takePuts(); !slices.Equal(got, want) {
 		t.Fatalf("puts = %v, want %v", got, want)
 	}
 }
 
-func TestAPropRemovedHereIsMarkedAndItsFilesStay(t *testing.T) {
+func TestADocumentRemovedHereIsMarkedAndItsFilesStay(t *testing.T) {
 	bucket := newFakeBucket()
 	app := newCloudApp(t, bucket)
 	savedAtTime(t, app, "oak", time.Now())
 
 	backUp(t, app)
 
-	if err := app.RemoveProp("oak"); err != nil {
+	if err := app.RemoveDocument("oak"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -226,12 +207,12 @@ func TestAPropRemovedHereIsMarkedAndItsFilesStay(t *testing.T) {
 		t.Fatal("no removed mark")
 	}
 
-	if _, found := bucket.objects["wails-desktop-template/props/oak.json"]; !found {
-		t.Fatal("the removed prop's file was taken out of the bucket")
+	if _, found := bucket.objects["wails-desktop-template/documents/oak.json"]; !found {
+		t.Fatal("the removed document's file was taken out of the bucket")
 	}
 }
 
-func TestAPropOnlyAnotherComputerHasIsNeverMarkedRemoved(t *testing.T) {
+func TestADocumentOnlyAnotherComputerHasIsNeverMarkedRemoved(t *testing.T) {
 	bucket := newFakeBucket()
 	first := newCloudApp(t, bucket)
 	savedAtTime(t, first, "oak", time.Now())
@@ -245,7 +226,7 @@ func TestAPropOnlyAnotherComputerHasIsNeverMarkedRemoved(t *testing.T) {
 	}
 
 	if _, found := bucket.objects["wails-desktop-template/removed/oak.json"]; found {
-		t.Fatal("the other computer's prop was marked removed")
+		t.Fatal("the other computer's document was marked removed")
 	}
 }
 
@@ -256,12 +237,12 @@ func TestANewerPropFromAnotherComputerIsNotOverwritten(t *testing.T) {
 	savedAtTime(t, laptop, "oak", time.Date(2026, time.November, 1, 9, 0, 0, 0, time.UTC))
 
 	desktop := newCloudApp(t, bucket)
-	if err := desktop.WriteProp("oak", []byte(`{"name":"oak from the desktop"}`), nil); err != nil {
+	if err := desktop.WriteDocument("oak", []byte(`{"name":"oak from the desktop"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
 	newer := time.Date(2026, time.November, 3, 9, 0, 0, 0, time.UTC)
-	if err := os.Chtimes(filepath.Join(desktop.libraryRoot, "oak.json"), newer, newer); err != nil {
+	if err := os.Chtimes(filepath.Join(desktop.folder(t), "oak.json"), newer, newer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -271,7 +252,7 @@ func TestANewerPropFromAnotherComputerIsNotOverwritten(t *testing.T) {
 		t.Fatalf("summary = %+v", summary)
 	}
 
-	if got := string(bucket.objects["wails-desktop-template/props/oak.json"].body); got != `{"name":"oak from the desktop"}` {
+	if got := string(bucket.objects["wails-desktop-template/documents/oak.json"].body); got != `{"name":"oak from the desktop"}` {
 		t.Fatalf("the bucket holds %q", got)
 	}
 }
@@ -325,7 +306,7 @@ func TestRestoringFromTheCloudBringsBackPropsAndRemovedOnes(t *testing.T) {
 	savedAtTime(t, old, "gone", saved)
 	backUp(t, old)
 
-	if err := old.RemoveProp("gone"); err != nil {
+	if err := old.RemoveDocument("gone"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -340,21 +321,21 @@ func TestRestoringFromTheCloudBringsBackPropsAndRemovedOnes(t *testing.T) {
 	}
 
 	statuses := map[string]string{}
-	for _, prop := range held.Props {
-		statuses[prop.ID] = prop.Status
+	for _, document := range held.Documents {
+		statuses[document.ID] = document.Status
 	}
 
-	if statuses["oak"] != "new" || statuses["gone"] != "removed" || held.Palettes != "[]" {
-		t.Fatalf("statuses = %v, palettes = %q", statuses, held.Palettes)
+	if statuses["oak"] != "new" || statuses["gone"] != "removed" || held.Extras != "[]" {
+		t.Fatalf("statuses = %v, extras = %q", statuses, held.Extras)
 	}
 
 	if restored, err := fresh.RestoreFromHolding([]RestoreChoice{{ID: "oak"}}); err != nil || restored != 1 {
 		t.Fatalf("restored %d, %v", restored, err)
 	}
 
-	props, _ := fresh.ListProps()
-	if len(props) != 1 || props[0].SavedAt != saved.Format(time.RFC3339) || !props[0].HasPicture {
-		t.Fatalf("props = %+v", props)
+	documents, _ := fresh.ListDocuments()
+	if len(documents) != 1 || documents[0].SavedAt != saved.Format(time.RFC3339) || !documents[0].HasPicture {
+		t.Fatalf("documents = %+v", documents)
 	}
 }
 
@@ -372,9 +353,9 @@ func TestCheckingTheConnectionLeavesOnlyTheProbe(t *testing.T) {
 }
 
 func TestTheSecretKeyIsKeptApartAndNeverHandedBack(t *testing.T) {
-	secrets := &memorySecrets{}
+	store := &secrets.Memory{}
 	app := newBackupApp(t)
-	app.secrets = secrets
+	app.secrets = store
 
 	if app.CloudKeys().Saved {
 		t.Fatal("keys were said to be saved before any were")
@@ -385,8 +366,12 @@ func TestTheSecretKeyIsKeptApartAndNeverHandedBack(t *testing.T) {
 	}
 
 	// Changing only the access key keeps the secret.
-	if err := app.SetCloudKeys("id2", ""); err != nil || secrets.keys.SecretKey != "very secret" {
-		t.Fatalf("keys = %+v, %v", secrets.keys, err)
+	if err := app.SetCloudKeys("id2", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	if saved, _ := store.Get(cloudKeysName); !strings.Contains(saved, `"secretKey":"very secret"`) || !strings.Contains(saved, `"accessKey":"id2"`) {
+		t.Fatalf("keys = %s", saved)
 	}
 
 	info, _ := json.Marshal(app.CloudKeys())
@@ -394,9 +379,10 @@ func TestTheSecretKeyIsKeptApartAndNeverHandedBack(t *testing.T) {
 		t.Fatalf("the secret was handed back: %s", info)
 	}
 
-	settings, _ := app.ReadSettings()
-	if strings.Contains(string(settings), "very secret") {
-		t.Fatal("the secret reached the settings file")
+	for _, name := range libraryEntries(t, app.data) {
+		if contents, _ := os.ReadFile(filepath.Join(app.data, name)); strings.Contains(string(contents), "very secret") {
+			t.Fatalf("the secret reached %s", name)
+		}
 	}
 
 	if err := app.ForgetCloudKeys(); err != nil || app.CloudKeys().Saved {
@@ -406,7 +392,6 @@ func TestTheSecretKeyIsKeptApartAndNeverHandedBack(t *testing.T) {
 
 func TestWithoutKeysNothingReachesTheStorage(t *testing.T) {
 	app := newBackupApp(t)
-	app.secrets = &memorySecrets{}
 
 	if _, err := app.BackUpToCloud(testTarget, nil, "0.4.0"); !errors.Is(err, errCloudNoKeys) {
 		t.Fatalf("BackUpToCloud = %v, want errCloudNoKeys", err)
@@ -455,7 +440,7 @@ func (f *fakeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Path style: /bucket/key.
 	bucket, key, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	if bucket != "props" {
+	if bucket != "notes" {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = io.WriteString(w, `<Error><Code>NoSuchBucket</Code></Error>`)
 		return
@@ -518,7 +503,7 @@ func newFakeS3(t *testing.T) (*fakeS3, CloudTarget) {
 		Service:   "other",
 		Endpoint:  strings.TrimPrefix(listener.URL, "http://"),
 		Region:    "auto",
-		Bucket:    "props",
+		Bucket:    "notes",
 		Folder:    "wails-desktop-template",
 		PathStyle: true,
 	}
@@ -535,11 +520,11 @@ func TestTheS3ClientSendsNoChecksumHeaders(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	if err := store.put(ctx, "wails-desktop-template/props/oak.json", []byte(`{"name":"oak"}`), map[string]string{metaSHA256: "abc"}); err != nil {
+	if err := store.put(ctx, "wails-desktop-template/documents/oak.json", []byte(`{"name":"oak"}`), map[string]string{metaSHA256: "abc"}); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := store.get(ctx, "wails-desktop-template/props/oak.json"); err != nil {
+	if _, err := store.get(ctx, "wails-desktop-template/documents/oak.json"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -552,7 +537,7 @@ func TestTheS3ClientSendsNoChecksumHeaders(t *testing.T) {
 		}
 	}
 
-	if path := server.requests[0].URL.Path; path != "/props/wails-desktop-template/props/oak.json" {
+	if path := server.requests[0].URL.Path; path != "/notes/wails-desktop-template/documents/oak.json" {
 		t.Fatalf("path = %q, want the bucket in the path", path)
 	}
 }
@@ -570,17 +555,17 @@ func TestTheS3ClientRoundTripsThroughTheServer(t *testing.T) {
 		t.Fatalf("ping = %v", err)
 	}
 
-	if err := store.put(ctx, "wails-desktop-template/props/oak.json", []byte("oak"), map[string]string{metaSHA256: "abc", metaSavedAt: "2026-11-04T10:00:00Z"}); err != nil {
+	if err := store.put(ctx, "wails-desktop-template/documents/oak.json", []byte("oak"), map[string]string{metaSHA256: "abc", metaSavedAt: "2026-11-04T10:00:00Z"}); err != nil {
 		t.Fatal(err)
 	}
 
-	meta, err := store.head(ctx, "wails-desktop-template/props/oak.json")
+	meta, err := store.head(ctx, "wails-desktop-template/documents/oak.json")
 	if err != nil || meta[metaSHA256] != "abc" || meta[metaSavedAt] != "2026-11-04T10:00:00Z" {
 		t.Fatalf("head = %v, %v", meta, err)
 	}
 
-	listed, err := store.list(ctx, "wails-desktop-template/props/")
-	if err != nil || len(listed) != 1 || listed[0].Key != "wails-desktop-template/props/oak.json" {
+	listed, err := store.list(ctx, "wails-desktop-template/documents/")
+	if err != nil || len(listed) != 1 || listed[0].Key != "wails-desktop-template/documents/oak.json" {
 		t.Fatalf("list = %+v, %v", listed, err)
 	}
 
@@ -633,7 +618,7 @@ func TestTheStoragesRefusalsBecomePlainErrors(t *testing.T) {
 }
 
 func TestAnUnreachableStorageSaysSo(t *testing.T) {
-	store, err := newS3Store(CloudTarget{Service: "other", Endpoint: "127.0.0.1:1", Bucket: "props", PathStyle: true}, cloudKeys{AccessKey: "id", SecretKey: "secret"})
+	store, err := newS3Store(CloudTarget{Service: "other", Endpoint: "127.0.0.1:1", Bucket: "notes", PathStyle: true}, cloudKeys{AccessKey: "id", SecretKey: "secret"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -643,7 +628,7 @@ func TestAnUnreachableStorageSaysSo(t *testing.T) {
 	}
 }
 
-func TestAPropSaysWhetherItIsBackedUp(t *testing.T) {
+func TestADocumentSaysWhetherItIsBackedUp(t *testing.T) {
 	bucket := newFakeBucket()
 	app := newCloudApp(t, bucket)
 	savedAtTime(t, app, "oak", time.Now())
@@ -651,7 +636,7 @@ func TestAPropSaysWhetherItIsBackedUp(t *testing.T) {
 	status := func() string {
 		t.Helper()
 
-		got, err := app.CloudPropStatus(testTarget, "oak")
+		got, err := app.CloudDocumentStatus(testTarget, "oak")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -669,7 +654,7 @@ func TestAPropSaysWhetherItIsBackedUp(t *testing.T) {
 		t.Fatalf("after a backup: %q", got)
 	}
 
-	if err := app.WriteProp("oak", []byte(`{"name":"oak, changed"}`), nil); err != nil {
+	if err := app.WriteDocument("oak", []byte(`{"name":"oak, changed"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -681,7 +666,7 @@ func TestAPropSaysWhetherItIsBackedUp(t *testing.T) {
 	other := testTarget
 	other.Bucket = "elsewhere"
 
-	if got, _ := app.CloudPropStatus(other, "oak"); got != "not-yet" {
+	if got, _ := app.CloudDocumentStatus(other, "oak"); got != "not-yet" {
 		t.Fatalf("for another bucket: %q", got)
 	}
 }

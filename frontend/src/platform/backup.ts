@@ -13,31 +13,35 @@ import {desktopApp, desktopRuntime} from './shell'
 const BACKUP_FILTERS = ['*.zip']
 const PROGRESS_EVENT = 'backup:progress'
 
-interface BackupBindings {
+/** What backups ask of the core: dialogs, and holding the close while a backup is due. */
+interface CoreBindings {
     SaveFileDialog(title: string, defaultName: string, filters: string[]): Promise<string>
     OpenFileDialog(title: string, filters: string[]): Promise<string>
-    BackUpToFile(path: string, palettes: number[], appVersion: string): Promise<{props: number; bytes: number}>
+    ChooseFolder(title: string, start: string): Promise<string>
+    SetBusy(reason: string): Promise<void>
+}
+
+interface BackupBindings {
+    BackUpToFile(path: string, extras: number[], appVersion: string): Promise<{documents: number; bytes: number}>
     OpenBackupFile(path: string): Promise<HeldBackupFile>
-    ReadHeldProp(id: string): Promise<unknown>
+    ReadHeldDocument(id: string): Promise<unknown>
     RestoreFromHolding(choices: RestoreChoice[]): Promise<number>
     ClearHolding(): Promise<void>
     StopBackup(): Promise<void>
     LibraryFingerprint(): Promise<string>
     FolderExists(folder: string): Promise<boolean>
     PruneFolderBackups(folder: string, keep: number): Promise<number>
-    SetBackupDue(due: boolean): Promise<void>
-    ChooseFolder(title: string, start: string): Promise<string>
     SetCloudKeys(accessKey: string, secretKey: string): Promise<void>
     CloudKeys(): Promise<{saved: boolean; accessKey: string}>
     ForgetCloudKeys(): Promise<void>
     CheckCloudBackup(target: CloudTarget): Promise<void>
-    BackUpToCloud(target: CloudTarget, palettes: number[], appVersion: string): Promise<CloudSummary>
+    BackUpToCloud(target: CloudTarget, extras: number[], appVersion: string): Promise<CloudSummary>
     OpenCloudBackup(target: CloudTarget): Promise<HeldBackupFile>
-    CloudPropStatus(target: CloudTarget, id: string): Promise<string>
+    CloudDocumentStatus(target: CloudTarget, id: string): Promise<string>
 }
 
-/** Whether a prop is in the cloud backup as it is now. */
-export type CloudPropStatus = 'backed-up' | 'changed' | 'not-yet'
+/** Whether a document is in the cloud backup as it is now. */
+export type CloudDocumentStatus = 'backed-up' | 'changed' | 'not-yet'
 
 /** Where cloud backups go: the settings, without the keys. */
 export interface CloudTarget {
@@ -50,7 +54,7 @@ export interface CloudTarget {
 }
 
 export interface CloudSummary {
-    readonly props: number
+    readonly documents: number
     readonly uploaded: number
     readonly changedElsewhere: number
     readonly removed: number
@@ -59,18 +63,30 @@ export interface CloudSummary {
 interface HeldBackupFile {
     app: string
     madeAt: string
-    props: {id: string; savedAt: string; size: number; hasPicture: boolean; status: HeldStatus}[] | null
-    palettes: string
+    documents: {id: string; savedAt: string; size: number; hasPicture: boolean; status: HeldStatus}[] | null
+    extras: string
 }
 
 const bindings = (): BackupBindings | undefined =>
-    desktopApp<BackupBindings>()
+    desktopApp<BackupBindings>('backup')
+
+const BACKUPS_NEED_THE_APP = 'Backups need the desktop app.'
 
 function backupBindings(): BackupBindings {
     const app = bindings()
 
     if (!app) {
-        throw new Error('Backups need the desktop app.')
+        throw new Error(BACKUPS_NEED_THE_APP)
+    }
+
+    return app
+}
+
+function coreBindings(): CoreBindings {
+    const app = desktopApp<CoreBindings>()
+
+    if (!app) {
+        throw new Error(BACKUPS_NEED_THE_APP)
     }
 
     return app
@@ -88,19 +104,19 @@ export function backupFileName(now: Date = new Date()): string {
 
 /** Asks where to save a backup. Null when the person cancels. */
 export async function chooseBackupTarget(): Promise<string | null> {
-    return (await backupBindings().SaveFileDialog('Back up your work', backupFileName(), BACKUP_FILTERS)) || null
+    return (await coreBindings().SaveFileDialog('Back up your work', backupFileName(), BACKUP_FILTERS)) || null
 }
 
 /** Asks for a backup to restore. Null when the person cancels. */
 export async function chooseBackupSource(): Promise<string | null> {
-    return (await backupBindings().OpenFileDialog('Restore from a backup', BACKUP_FILTERS)) || null
+    return (await coreBindings().OpenFileDialog('Restore from a backup', BACKUP_FILTERS)) || null
 }
 
-export async function backUpToFile(path: string, palettes: string, appVersion: string): Promise<{props: number; bytes: number}> {
-    return backupBindings().BackUpToFile(path, [...new TextEncoder().encode(palettes)], appVersion)
+export async function backUpToFile(path: string, extras: string, appVersion: string): Promise<{documents: number; bytes: number}> {
+    return backupBindings().BackUpToFile(path, [...new TextEncoder().encode(extras)], appVersion)
 }
 
-export interface HeldProp {
+export interface HeldDocument {
     readonly id: string
     readonly savedAt: string
     readonly size: number
@@ -112,8 +128,9 @@ export interface HeldProp {
 export interface HeldBackup {
     readonly app: string
     readonly madeAt: string
-    readonly props: readonly HeldProp[]
-    readonly palettes: string
+    readonly documents: readonly HeldDocument[]
+    /** The extra text handed over when the backup was made, or empty. */
+    readonly extras: string
 }
 
 export async function openBackupFile(path: string): Promise<HeldBackup> {
@@ -129,13 +146,13 @@ function heldBackupFrom(held: HeldBackupFile): HeldBackup {
     return {
         app: held.app,
         madeAt: held.madeAt,
-        palettes: held.palettes,
-        props: (held.props ?? []).map((prop) => ({
-            id: prop.id,
-            savedAt: prop.savedAt,
-            size: prop.size,
-            status: prop.status,
-            picture: prop.hasPicture ? `/your-props/restoring/${encodeURIComponent(prop.id)}.png?v=${encodeURIComponent(held.madeAt)}` : null,
+        extras: held.extras,
+        documents: (held.documents ?? []).map((document) => ({
+            id: document.id,
+            savedAt: document.savedAt,
+            size: document.size,
+            status: document.status,
+            picture: document.hasPicture ? `/documents/restoring/${encodeURIComponent(document.id)}.png?v=${encodeURIComponent(held.madeAt)}` : null,
         })),
     }
 }
@@ -150,21 +167,21 @@ export async function savedCloudKeys(): Promise<{saved: boolean; accessKey: stri
 
 export const forgetCloudKeys = async (): Promise<void> => bindings()?.ForgetCloudKeys()
 
-/** Asks Go, without any connection, whether one prop is backed up to the cloud as it is now. */
-export async function cloudPropStatus(target: CloudTarget, id: string): Promise<CloudPropStatus> {
-    const status = await backupBindings().CloudPropStatus(target, id)
+/** Asks Go, without any connection, whether one document is backed up to the cloud as it is now. */
+export async function cloudDocumentStatus(target: CloudTarget, id: string): Promise<CloudDocumentStatus> {
+    const status = await backupBindings().CloudDocumentStatus(target, id)
 
     return status === 'backed-up' || status === 'changed' ? status : 'not-yet'
 }
 
 export const checkCloudBackup = (target: CloudTarget): Promise<void> => backupBindings().CheckCloudBackup(target)
 
-export async function backUpToCloud(target: CloudTarget, palettes: string, appVersion: string): Promise<CloudSummary> {
-    return backupBindings().BackUpToCloud(target, [...new TextEncoder().encode(palettes)], appVersion)
+export async function backUpToCloud(target: CloudTarget, extras: string, appVersion: string): Promise<CloudSummary> {
+    return backupBindings().BackUpToCloud(target, [...new TextEncoder().encode(extras)], appVersion)
 }
 
-export async function readHeldProp(id: string): Promise<string> {
-    return textFromBinding(await backupBindings().ReadHeldProp(id))
+export async function readHeldDocument(id: string): Promise<string> {
+    return textFromBinding(await backupBindings().ReadHeldDocument(id))
 }
 
 export const restoreFromHolding = (choices: RestoreChoice[]): Promise<number> => backupBindings().RestoreFromHolding(choices)
@@ -174,7 +191,7 @@ export async function clearHolding(): Promise<void> {
     await bindings()?.ClearHolding()
 }
 
-/** Sums up the saved props without reading them, to tell whether anything changed. */
+/** Sums up the saved documents without reading them, to tell whether anything changed. */
 export const libraryFingerprint = (): Promise<string> => backupBindings().LibraryFingerprint()
 
 /** Whether a folder is there now, such as a drive that may be unplugged. */
@@ -185,12 +202,12 @@ export const pruneFolderBackups = (folder: string, keep: number): Promise<number
 
 /** Tells the close guard a backup may be due, so closing comes to us first. */
 export async function setBackupDue(due: boolean): Promise<void> {
-    await bindings()?.SetBackupDue(due)
+    await desktopApp<CoreBindings>()?.SetBusy(due ? 'backup' : '')
 }
 
 /** Asks for the folder automatic backups go to. Null when the person cancels. */
 export async function chooseBackupFolder(start: string): Promise<string | null> {
-    return (await backupBindings().ChooseFolder('Back up to this folder', start)) || null
+    return (await coreBindings().ChooseFolder('Back up to this folder', start)) || null
 }
 
 export const stopBackup = async (): Promise<void> => bindings()?.StopBackup()

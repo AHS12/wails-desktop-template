@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// macTrayIcon is the trees from the app icon, in black on clear, for the Mac's
+// macTrayIcon is the app icon, in black on clear, for the Mac's
 // menu bar. macOS draws it in the menu bar's own colour, light or dark.
 //
 //go:embed tray-mac.png
@@ -147,7 +147,7 @@ func (a *App) showWindow() {
 
 // SecondLaunch is what happens when the app is opened while it's already
 // running, perhaps hidden: the open window comes back instead of a second copy,
-// which would share and overwrite the same draft and props. It is a function
+// which would share and overwrite the same draft and documents. It is a function
 // rather than a method so Wails doesn't offer it to the interface.
 func SecondLaunch(a *App) func(application.SecondInstanceData) {
 	return func(application.SecondInstanceData) {

@@ -1,4 +1,4 @@
-package backend
+package backup
 
 import (
 	"archive/zip"
@@ -13,17 +13,83 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"wails-desktop-template/backend"
+	"wails-desktop-template/backend/documents"
+	"wails-desktop-template/backend/secrets"
 )
 
-// newBackupApp returns an App whose saved props, settings and holding folder
-// are all in fresh temporary folders.
-func newBackupApp(t *testing.T) *App {
+// testApp is one computer: its library and its backups, with the library, the
+// data folder and the holding folder all in fresh temporary folders.
+type testApp struct {
+	*Service
+	*documents.Library
+	data string
+}
+
+func newBackupApp(t *testing.T) *testApp {
 	t.Helper()
 
-	app := newLibraryApp(t)
-	app.draftRoot = t.TempDir()
+	data := t.TempDir()
+	shell := backend.Shell{DataFolder: func() (string, error) { return data, nil }, Emit: func(string, ...any) {}}
+	library := documents.New(shell)
+	app := &testApp{Service: New(shell, library, &secrets.Memory{}), Library: library, data: data}
+	app.setFolder(t, t.TempDir())
 
 	return app
+}
+
+// setFolder moves the library to folder, as a new computer or Settings would.
+func (a *testApp) setFolder(t *testing.T, folder string) {
+	t.Helper()
+
+	if err := a.SetLibraryFolder(folder); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// folder is where the library is now.
+func (a *testApp) folder(t *testing.T) string {
+	t.Helper()
+
+	folder, err := a.LibraryFolder()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return folder
+}
+
+// savedAtTime writes a document with a picture and sets its time saved.
+func savedAtTime(t *testing.T, app *testApp, id string, at time.Time) {
+	t.Helper()
+
+	if err := app.WriteDocument(id, []byte(`{"name":"`+id+`"}`), []byte("png "+id)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chtimes(filepath.Join(app.folder(t), id+".json"), at, at); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// libraryEntries lists the names in dir, sorted.
+func libraryEntries(t *testing.T, dir string) []string {
+	t.Helper()
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %q: %v", dir, err)
+	}
+
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+
+	slices.Sort(names)
+
+	return names
 }
 
 // zipEntries lists the names in the zip at path, sorted.
@@ -82,11 +148,11 @@ func TestABackupHoldsEveryPropAndPictureButNotTheBin(t *testing.T) {
 	savedAtTime(t, app, "pine", time.Now())
 	savedAtTime(t, app, "gone", time.Now())
 
-	if err := app.RemoveProp("gone"); err != nil {
+	if err := app.RemoveDocument("gone"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(app.libraryRoot, "notes.txt"), []byte("mine"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(app.folder(t), "notes.txt"), []byte("mine"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -97,11 +163,11 @@ func TestABackupHoldsEveryPropAndPictureButNotTheBin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if summary.Props != 2 {
-		t.Fatalf("summary = %+v, want 2 props", summary)
+	if summary.Documents != 2 {
+		t.Fatalf("summary = %+v, want 2 documents", summary)
 	}
 
-	want := []string{"backup.json", "palettes.json", "props/oak.json", "props/oak.png", "props/pine.json", "props/pine.png"}
+	want := []string{"backup.json", "documents/oak.json", "documents/oak.png", "documents/pine.json", "documents/pine.png", "extras.json"}
 	if got := zipEntries(t, target); !slices.Equal(got, want) {
 		t.Fatalf("zip holds %v, want %v", got, want)
 	}
@@ -110,7 +176,7 @@ func TestABackupHoldsEveryPropAndPictureButNotTheBin(t *testing.T) {
 func TestABackupTakesTheAppsOwnFoldersToo(t *testing.T) {
 	app := newBackupApp(t)
 
-	looks := filepath.Join(app.libraryRoot, "looks")
+	looks := filepath.Join(app.folder(t), "looks")
 	if err := os.MkdirAll(looks, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +190,7 @@ func TestABackupTakesTheAppsOwnFoldersToo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := zipEntries(t, target); !slices.Contains(got, "props/looks/autumn.json") {
+	if got := zipEntries(t, target); !slices.Contains(got, "documents/looks/autumn.json") {
 		t.Fatalf("zip holds %v, want the look", got)
 	}
 }
@@ -135,24 +201,24 @@ func TestBackingUpAndRestoringIntoAnEmptyFolderGivesTheSameProps(t *testing.T) {
 	savedAtTime(t, app, "oak", saved)
 
 	target := filepath.Join(t.TempDir(), "backup.zip")
-	if _, err := app.BackUpToFile(target, []byte(`palettes`), "0.4.0"); err != nil {
+	if _, err := app.BackUpToFile(target, []byte(`extras`), "0.4.0"); err != nil {
 		t.Fatal(err)
 	}
 
-	// A new computer: an empty saved props folder.
-	app.libraryRoot = t.TempDir()
+	// A new computer: an empty saved documents folder.
+	app.setFolder(t, t.TempDir())
 
 	held, err := app.OpenBackupFile(target)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if held.Palettes != "palettes" || held.App != "0.4.0" {
+	if held.Extras != "extras" || held.App != "0.4.0" {
 		t.Fatalf("held = %+v", held)
 	}
 
-	if len(held.Props) != 1 || held.Props[0].Status != "new" || !held.Props[0].HasPicture {
-		t.Fatalf("held props = %+v", held.Props)
+	if len(held.Documents) != 1 || held.Documents[0].Status != "new" || !held.Documents[0].HasPicture {
+		t.Fatalf("held documents = %+v", held.Documents)
 	}
 
 	restored, err := app.RestoreFromHolding([]RestoreChoice{{ID: "oak"}})
@@ -160,16 +226,16 @@ func TestBackingUpAndRestoringIntoAnEmptyFolderGivesTheSameProps(t *testing.T) {
 		t.Fatalf("restored %d, %v", restored, err)
 	}
 
-	contents, _ := app.ReadProp("oak")
-	picture, _ := app.ReadPropThumbnail("oak")
+	contents, _ := app.ReadDocument("oak")
+	picture, _ := app.ReadDocumentPicture("oak")
 
 	if string(contents) != `{"name":"oak"}` || string(picture) != "png oak" {
-		t.Fatalf("prop = %q, picture = %q", contents, picture)
+		t.Fatalf("document = %q, picture = %q", contents, picture)
 	}
 
-	props, _ := app.ListProps()
-	if len(props) != 1 || props[0].SavedAt != saved.Format(time.RFC3339) {
-		t.Fatalf("restored props = %+v, want saved at %s", props, saved.Format(time.RFC3339))
+	documents, _ := app.ListDocuments()
+	if len(documents) != 1 || documents[0].SavedAt != saved.Format(time.RFC3339) {
+		t.Fatalf("restored documents = %+v, want saved at %s", documents, saved.Format(time.RFC3339))
 	}
 }
 
@@ -183,11 +249,11 @@ func TestOpeningABackupComparesItWithTheSavedProps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := app.WriteProp("changed", []byte(`{"name":"changed since"}`), nil); err != nil {
+	if err := app.WriteDocument("changed", []byte(`{"name":"changed since"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := app.RemoveProp("same"); err != nil {
+	if err := app.RemoveDocument("same"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,8 +265,8 @@ func TestOpeningABackupComparesItWithTheSavedProps(t *testing.T) {
 	}
 
 	got := map[string]string{}
-	for _, prop := range held.Props {
-		got[prop.ID] = prop.Status
+	for _, document := range held.Documents {
+		got[document.ID] = document.Status
 	}
 
 	if got["same"] != "same" || got["changed"] != "different" {
@@ -217,7 +283,7 @@ func TestRestoringNeverReplacesASavedProp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := app.WriteProp("oak", []byte(`{"name":"newer"}`), nil); err != nil {
+	if err := app.WriteDocument("oak", []byte(`{"name":"newer"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -225,8 +291,8 @@ func TestRestoringNeverReplacesASavedProp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := app.RestoreFromHolding([]RestoreChoice{{ID: "oak"}}); !errors.Is(err, errAlreadyThere) {
-		t.Fatalf("restoring over a different prop = %v, want errAlreadyThere", err)
+	if _, err := app.RestoreFromHolding([]RestoreChoice{{ID: "oak"}}); !errors.Is(err, documents.ErrAlreadyThere) {
+		t.Fatalf("restoring over a different document = %v, want documents.ErrAlreadyThere", err)
 	}
 
 	restored, err := app.RestoreFromHolding([]RestoreChoice{{ID: "oak", CopyID: "oakbackup", CopyContents: `{"name":"oak (from backup)"}`}})
@@ -234,16 +300,16 @@ func TestRestoringNeverReplacesASavedProp(t *testing.T) {
 		t.Fatalf("restoring as a copy = %d, %v", restored, err)
 	}
 
-	kept, _ := app.ReadProp("oak")
-	copied, _ := app.ReadProp("oakbackup")
-	picture, _ := app.ReadPropThumbnail("oakbackup")
+	kept, _ := app.ReadDocument("oak")
+	copied, _ := app.ReadDocument("oakbackup")
+	picture, _ := app.ReadDocumentPicture("oakbackup")
 
 	if string(kept) != `{"name":"newer"}` || string(copied) != `{"name":"oak (from backup)"}` || string(picture) != "png oak" {
 		t.Fatalf("kept = %q, copy = %q, picture = %q", kept, copied, picture)
 	}
 }
 
-func TestRestoringAPropThatIsAlreadyHereDoesNothing(t *testing.T) {
+func TestRestoringADocumentThatIsAlreadyHereDoesNothing(t *testing.T) {
 	app := newBackupApp(t)
 	savedAtTime(t, app, "oak", time.Now())
 
@@ -266,8 +332,8 @@ func TestRestoringBringsInMissingFilesFromTheAppsFolders(t *testing.T) {
 	app := newBackupApp(t)
 
 	path := writeZip(t, map[string]string{
-		"backup.json":             `{"format":1,"files":[]}`,
-		"props/looks/autumn.json": `{"look":1}`,
+		"backup.json":                 `{"format":1,"files":[]}`,
+		"documents/looks/autumn.json": `{"look":1}`,
 	})
 
 	if _, err := app.OpenBackupFile(path); err != nil {
@@ -278,7 +344,7 @@ func TestRestoringBringsInMissingFilesFromTheAppsFolders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	contents, err := os.ReadFile(filepath.Join(app.libraryRoot, "looks", "autumn.json"))
+	contents, err := os.ReadFile(filepath.Join(app.folder(t), "looks", "autumn.json"))
 	if err != nil || string(contents) != `{"look":1}` {
 		t.Fatalf("look = %q, %v", contents, err)
 	}
@@ -286,7 +352,7 @@ func TestRestoringBringsInMissingFilesFromTheAppsFolders(t *testing.T) {
 
 func TestABackupFromANewerAppIsRefused(t *testing.T) {
 	app := newBackupApp(t)
-	path := writeZip(t, map[string]string{"backup.json": `{"format":2}`, "props/oak.json": `{}`})
+	path := writeZip(t, map[string]string{"backup.json": `{"format":2}`, "documents/oak.json": `{}`})
 
 	if _, err := app.OpenBackupFile(path); !errors.Is(err, errNewerBackup) {
 		t.Fatalf("OpenBackupFile = %v, want errNewerBackup", err)
@@ -301,7 +367,7 @@ func TestAFileThatIsNotABackupIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, path := range []string{notZip, writeZip(t, map[string]string{"props/oak.json": `{}`})} {
+	for _, path := range []string{notZip, writeZip(t, map[string]string{"documents/oak.json": `{}`})} {
 		if _, err := app.OpenBackupFile(path); !errors.Is(err, errNotABackup) {
 			t.Fatalf("OpenBackupFile(%s) = %v, want errNotABackup", filepath.Base(path), err)
 		}
@@ -312,13 +378,13 @@ func TestABackupCannotWriteOutsideTheHoldingFolder(t *testing.T) {
 	app := newBackupApp(t)
 
 	for _, name := range []string{
-		"props/../escape.json",
-		"props/../../escape.json",
-		"/props/oak.json",
-		"props/C:/escape.json",
-		`props/sub\oak.json`,
-		"props/oak.exe",
-		"props/removed/oak.json",
+		"documents/../escape.json",
+		"documents/../../escape.json",
+		"/documents/oak.json",
+		"documents/C:/escape.json",
+		`documents/sub\oak.json`,
+		"documents/oak.exe",
+		"documents/removed/oak.json",
 		"elsewhere/oak.json",
 	} {
 		path := writeZip(t, map[string]string{"backup.json": `{"format":1}`, name: `{}`})
@@ -328,7 +394,7 @@ func TestABackupCannotWriteOutsideTheHoldingFolder(t *testing.T) {
 		}
 	}
 
-	if _, err := os.Stat(filepath.Join(filepath.Dir(app.draftRoot), "escape.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(filepath.Dir(app.data), "escape.json")); err == nil {
 		t.Fatal("a file was written outside the holding folder")
 	}
 }
@@ -400,7 +466,7 @@ func TestTheManifestSaysWhatTheBackupHolds(t *testing.T) {
 
 	written, _ := json.Marshal(manifest)
 	if strings.Contains(string(written), "removed") {
-		t.Fatalf("the manifest mentions the bin: %s", written)
+		t.Fatalf("the manifest mentions Recently removed: %s", written)
 	}
 }
 
@@ -418,7 +484,7 @@ func TestThePictureHandlerServesPicturesInABackupBeingRestored(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	PictureHandler(app).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/your-props/restoring/oak.png", nil))
+	HeldPictureHandler(app.Service).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, HeldPicturePrefix+"oak.png", nil))
 
 	if recorder.Code != http.StatusOK || recorder.Body.String() != "png oak" {
 		t.Fatalf("status = %d, body = %q", recorder.Code, recorder.Body.String())

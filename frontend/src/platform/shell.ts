@@ -25,13 +25,25 @@ export interface ShellRuntime {
     ClipboardSetText(text: string): Promise<boolean>
 }
 
+/**
+ * The Go services main.go registers, by package and type. Each optional feature is a
+ * service of its own, so removing one removes its line here too. The Go module is
+ * named after the app's id.
+ */
+export const SERVICES = {
+    core: 'backend.App',
+    documents: 'backend/documents.Library',
+    backup: 'backend/backup.Service',
+    export: 'backend/export.Files',
+} as const
+
+export type ServiceName = keyof typeof SERVICES
+
 interface Shell {
-    app: object | undefined
+    /** Go's methods for a service. A test's stand-in answers for every service. */
+    app: (service: ServiceName) => object | undefined
     runtime: ShellRuntime | undefined
 }
-
-/** The Go package and type of the service in main.go. The Go module is named after the app's id. */
-const SERVICE = `${APP.id}/backend.App`
 
 let current: Shell | undefined
 
@@ -65,13 +77,16 @@ export async function connectShell(): Promise<void> {
 
     // Each Go method is called by name, so the typed interfaces in each platform
     // file stay the only description of the boundary.
-    const app = new Proxy({}, {
-        get: (_target, name) =>
-            // Promise checks look for `then`, and this is not a promise.
-            typeof name === 'string' && name !== 'then'
-                ? (...args: unknown[]) => Call.ByName(`${SERVICE}.${name}`, ...args)
-                : undefined,
-    })
+    const proxyFor = (service: ServiceName) =>
+        new Proxy({}, {
+            get: (_target, name) =>
+                // Promise checks look for `then`, and this is not a promise.
+                typeof name === 'string' && name !== 'then'
+                    ? (...args: unknown[]) => Call.ByName(`${APP.id}/${SERVICES[service]}.${name}`, ...args)
+                    : undefined,
+        })
+    const proxies = Object.fromEntries(Object.keys(SERVICES).map((service) => [service, proxyFor(service as ServiceName)]))
+    const app = (service: ServiceName) => proxies[service]
 
     const runtime: ShellRuntime = {
         EventsOn: (name, callback) =>
@@ -95,9 +110,9 @@ export async function connectShell(): Promise<void> {
     current = {app, runtime}
 }
 
-/** Go's methods, typed by the caller, or undefined outside the app. */
-export function desktopApp<T>(): T | undefined {
-    return current?.app as T | undefined
+/** A Go service's methods, typed by the caller, or undefined outside the app. */
+export function desktopApp<T>(service: ServiceName = 'core'): T | undefined {
+    return current?.app(service) as T | undefined
 }
 
 /** The window's runtime, or undefined outside the app. */
@@ -107,5 +122,5 @@ export function desktopRuntime(): ShellRuntime | undefined {
 
 /** Puts a stand-in shell in place for a test, or takes it away with no arguments. */
 export function fakeDesktop(app?: object, runtime?: Partial<ShellRuntime>): void {
-    current = app || runtime ? {app, runtime: runtime as ShellRuntime | undefined} : undefined
+    current = app || runtime ? {app: () => app, runtime: runtime as ShellRuntime | undefined} : undefined
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func TestTheWindowOpensAtTheDefaultWhenNothingIsSaved(t *testing.T) {
-	app := &App{draftRoot: t.TempDir()}
+	app := &App{dataRoot: t.TempDir()}
 
 	state, placed := app.rememberWindow()
 
@@ -19,7 +19,7 @@ func TestTheWindowOpensAtTheDefaultWhenNothingIsSaved(t *testing.T) {
 }
 
 func TestTheWindowOpensAtTheSizeAndPlaceItWasLeft(t *testing.T) {
-	app := &App{draftRoot: t.TempDir()}
+	app := &App{dataRoot: t.TempDir()}
 	path, _ := app.windowStatePathOrDefault()
 
 	if err := saveWindowState(path, WindowState{X: 40, Y: 30, Width: 1600, Height: 1000}); err != nil {
@@ -132,7 +132,7 @@ func TestAPlaceIsTrustedWhenTheDesktopIsUnknown(t *testing.T) {
 }
 
 func TestNothingIsSavedUntilTheWindowIsRemembered(t *testing.T) {
-	app := &App{draftRoot: t.TempDir()}
+	app := &App{dataRoot: t.TempDir()}
 
 	// There is no window, so a real save would fail; this must not try.
 	app.saveWindow()

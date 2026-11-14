@@ -2,9 +2,12 @@ package backend
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -16,7 +19,7 @@ func newDraftApp(t *testing.T) *App {
 	t.Helper()
 
 	app := NewApp()
-	app.draftRoot = t.TempDir()
+	app.dataRoot = t.TempDir()
 
 	return app
 }
@@ -85,7 +88,7 @@ func TestClearDraftRemovesTheDraft(t *testing.T) {
 		t.Fatalf("ReadDraft after ClearDraft = %v, want nil", got)
 	}
 
-	if entries := libraryEntries(t, app.draftRoot); len(entries) != 0 {
+	if entries := folderEntries(t, app.dataRoot); len(entries) != 0 {
 		t.Fatalf("the draft folder still holds %v after ClearDraft", entries)
 	}
 }
@@ -138,47 +141,25 @@ func TestWriteDraftRefusesEmptyContents(t *testing.T) {
 				t.Fatalf("WriteDraft error = %q, want it to say the draft is empty", err)
 			}
 
-			if entries := libraryEntries(t, app.draftRoot); len(entries) != 0 {
+			if entries := folderEntries(t, app.dataRoot); len(entries) != 0 {
 				t.Fatalf("the draft folder holds %v after a refused write", entries)
 			}
 		})
 	}
 }
 
-func TestDraftLivesOutsideTheLibraryFolder(t *testing.T) {
-	// The computed defaults are compared, not the folders themselves, so the
-	// test neither creates nor reads the user's real config directory.
-	library, err := defaultLibraryFolder()
+func TestTheDraftLivesInTheDataFolder(t *testing.T) {
+	app := newDraftApp(t)
+
+	path, err := app.draftPath()
 	if err != nil {
-		t.Fatalf("defaultLibraryFolder: %v", err)
+		t.Fatal(err)
 	}
 
-	draft, err := defaultDraftPath()
-	if err != nil {
-		t.Fatalf("defaultDraftPath: %v", err)
-	}
-
-	if draft == library {
-		t.Fatalf("defaultDraftPath = %q, want something other than the library folder", draft)
-	}
-
-	// The gallery lists every *.json in the library folder, so a draft below it
-	// would be offered back as a saved prop.
-	if inside, err := filepath.Rel(library, draft); err == nil && !strings.HasPrefix(inside, "..") {
-		t.Fatalf("defaultDraftPath %q is inside the library folder %q (%q)", draft, library, inside)
-	}
-
-	if got := filepath.Dir(draft); got == library {
-		t.Fatalf("the draft folder %q is the library folder", got)
-	}
-
-	if got := filepath.Base(draft); got != draftFileName {
-		t.Fatalf("draft file name = %q, want %q", got, draftFileName)
-	}
-
-	// Both live under the same app folder, one beside the other.
-	if got, want := filepath.Dir(draft), filepath.Dir(library); got != want {
-		t.Fatalf("draft folder = %q, want the app folder %q", got, want)
+	// The library is a folder of its own inside the data folder, so the draft,
+	// beside it, is never listed as a saved document.
+	if path != filepath.Join(app.dataRoot, draftFileName) {
+		t.Fatalf("draft = %q, want it straight inside %q", path, app.dataRoot)
 	}
 }
 
@@ -204,7 +185,7 @@ func TestWriteDraftReplacesExistingDraftAndLeavesNoTempFiles(t *testing.T) {
 
 	// The rename left exactly one file behind, no temporary ones.
 	want := []string{"draft.json"}
-	if got := libraryEntries(t, app.draftRoot); !reflect.DeepEqual(got, want) {
+	if got := folderEntries(t, app.dataRoot); !reflect.DeepEqual(got, want) {
 		t.Fatalf("the draft folder holds %v, want %v", got, want)
 	}
 }
@@ -392,5 +373,46 @@ func TestSetUnsavedIsSafeForConcurrentCallers(t *testing.T) {
 	app.SetUnsaved(false)
 	if app.hasUnsavedChanges() {
 		t.Fatal("SetUnsaved(false) did not stick")
+	}
+}
+
+// folderEntries lists the names in dir, sorted, so a test can say exactly what
+// the folder holds, including that nothing else is left behind.
+func folderEntries(t *testing.T, dir string) []string {
+	t.Helper()
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %q: %v", dir, err)
+	}
+
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+
+	slices.Sort(names)
+
+	return names
+}
+
+func TestABusyFeatureHoldsTheCloseForTheInterface(t *testing.T) {
+	recorder := &recordingRuntime{}
+	app := &App{ctx: context.Background(), closeRuntime: recorder}
+
+	app.SetBusy("backup")
+
+	if !app.beforeClose() {
+		t.Fatal("a close while a backup was due went straight through")
+	}
+
+	if len(recorder.events) != 1 || recorder.events[0] != CloseRequestedEvent {
+		t.Fatalf("events = %v, want the close question", recorder.events)
+	}
+
+	app.SetBusy("")
+
+	if app.beforeClose() {
+		t.Fatal("a close with nothing due was held")
 	}
 }

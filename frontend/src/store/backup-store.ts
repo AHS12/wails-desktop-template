@@ -40,14 +40,14 @@ import {
     openBackupFile,
     openCloudBackup,
     saveCloudKeys,
-    readHeldProp,
+    readHeldDocument,
     pruneFolderBackups,
     restoreFromHolding,
     setBackupDue,
     stopBackup,
     type CloudTarget,
     type HeldBackup,
-    type HeldProp,
+    type HeldDocument,
 } from '../platform/backup'
 import {newDocumentId} from '../platform/documents'
 import {documentType, useDocumentStore} from './document-store'
@@ -58,7 +58,7 @@ import {useUiStore} from './ui-store'
 export type BackupPhase = 'idle' | 'backing-up' | 'opening' | 'restoring'
 
 /** A document in the backup with what it is, read from its file. */
-export interface HeldDocumentView extends HeldProp, DocumentSummary {}
+export interface HeldDocumentView extends HeldDocument, DocumentSummary {}
 
 export interface OpenRestore {
     readonly backup: HeldBackup
@@ -227,7 +227,7 @@ export function cloudTargetOf(cloud: CloudBackupSettings): CloudTarget {
 const targetOf = (cloud: CloudBackupSettings) => JSON.stringify(cloudTargetOf(cloud))
 
 /** "Backed up 23 notes", and anything left as it was. */
-export function cloudSummaryMessage(summary: {props: number; changedElsewhere: number}): string {
+export function cloudSummaryMessage(summary: {documents: number; changedElsewhere: number}): string {
     const elsewhere =
         summary.changedElsewhere === 0
             ? ''
@@ -235,7 +235,7 @@ export function cloudSummaryMessage(summary: {props: number; changedElsewhere: n
               ? `. 1 ${documentType.noun} was changed on another computer and was left as it is there`
               : `. ${summary.changedElsewhere} ${documentType.noun}s were changed on another computer and were left as they are there`
 
-    return `Backed up ${documentsLabel(summary.props)} to the cloud${elsewhere}`
+    return `Backed up ${documentsLabel(summary.documents)} to the cloud${elsewhere}`
 }
 
 /** The minute's wait after a change, restarted by every change. */
@@ -262,7 +262,7 @@ export const useBackupStore = create<BackupStore>((set, get) => {
         return underWay('opening', async (): Promise<OpenRestore> => {
             const backup = await load()
             const documents = await Promise.all(
-                backup.props.map(async (held) => ({...summarizeDocument(await readHeldProp(held.id).catch(() => '')), ...held})),
+                backup.documents.map(async (held) => ({...summarizeDocument(await readHeldDocument(held.id).catch(() => '')), ...held})),
             )
 
             return {backup, documents}
@@ -303,7 +303,7 @@ export const useBackupStore = create<BackupStore>((set, get) => {
 
                 const summary = await underWay('backing-up', () => backUpToFile(target, backupExtras.read(), APP_VERSION))
 
-                notify(`Backed up ${documentsLabel(summary.props)}`, folderOf(target))
+                notify(`Backed up ${documentsLabel(summary.documents)}`, folderOf(target))
             } catch (error) {
                 notify(describeBackupFailure(error, 'back up'))
             }
@@ -342,7 +342,7 @@ export const useBackupStore = create<BackupStore>((set, get) => {
                 // Only documents coming in as a second copy need their text, to be renamed.
                 for (const held of open.documents) {
                     if (ticked.has(held.id) && held.status === 'different') {
-                        texts.set(held.id, await readHeldProp(held.id))
+                        texts.set(held.id, await readHeldDocument(held.id))
                     }
                 }
 
@@ -354,7 +354,7 @@ export const useBackupStore = create<BackupStore>((set, get) => {
                     newDocumentId,
                 )
                 const restored = await underWay('restoring', () => restoreFromHolding(choices))
-                const added = backupExtras.restore(open.backup.palettes)
+                const added = backupExtras.restore(open.backup.extras)
 
                 set({restoring: null})
                 await clearHolding()

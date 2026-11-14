@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"wails-desktop-template/backend/fsutil"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -92,7 +94,7 @@ func (a *App) rememberWindow() (WindowState, bool) {
 	return state, true
 }
 
-// windowStatePathOrDefault puts the state beside the settings. draftRoot moves it
+// windowStatePathOrDefault puts the state beside the settings. dataRoot moves it
 // in tests, as it does the settings.
 func (a *App) windowStatePathOrDefault() (string, error) {
 	path, err := a.settingsPath()
@@ -268,7 +270,7 @@ func saveWindowState(path string, state WindowState) error {
 		return fmt.Errorf("cannot create the settings folder %q: %w", filepath.Dir(path), err)
 	}
 
-	return writeFileAtomic(path, contents)
+	return fsutil.WriteAtomic(path, contents)
 }
 
 // screenRect is a rectangle in Wails' units.

@@ -265,7 +265,7 @@ function StoragePage() {
                             Change…
                         </button>
                     </SettingRow>
-                    <SettingRow label="Space used" help={info ? `${info.props} ${info.props === 1 ? documentType.noun : `${documentType.noun}s`}, with their pictures.` : undefined}>
+                    <SettingRow label="Space used" help={info ? `${info.documents} ${info.documents === 1 ? documentType.noun : `${documentType.noun}s`}, with their pictures.` : undefined}>
                         <span className="tabular setting__value">{info ? formatBytes(info.bytes) : '…'}</span>
                     </SettingRow>
                     <SettingRow

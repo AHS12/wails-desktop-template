@@ -46,24 +46,24 @@ function fakeLibrary() {
     return {
         saved,
         bin,
-        ListProps: vi.fn(async () =>
+        ListDocuments: vi.fn(async () =>
             [...saved].map(([id, file]) => ({id, savedAt: file.savedAt, size: file.contents.length, hasPicture: true})),
         ),
-        ReadProp: vi.fn(async (id: string) => bytes(saved.get(id)?.contents ?? '')),
-        WriteProp: vi.fn(async (id: string, contents: number[]) => {
+        ReadDocument: vi.fn(async (id: string) => bytes(saved.get(id)?.contents ?? '')),
+        WriteDocument: vi.fn(async (id: string, contents: number[]) => {
             saved.set(id, {contents: new TextDecoder().decode(new Uint8Array(contents)), savedAt: '2026-11-04T10:00:00Z'})
         }),
-        CopyPropPicture: vi.fn(async () => undefined),
-        ReadPropsIndex: vi.fn(async () => null),
-        WritePropsIndex: vi.fn(async () => undefined),
-        ShowProp: vi.fn(async () => undefined),
-        RemoveProp: vi.fn(async (id: string) => move(saved, bin, id)),
-        PutBackProp: vi.fn(async (id: string) => move(bin, saved, id)),
-        ForgetRemovedProp: vi.fn(async (id: string) => void bin.delete(id)),
-        ListRemovedProps: vi.fn(async () =>
+        CopyDocumentPicture: vi.fn(async () => undefined),
+        ReadDocumentsIndex: vi.fn(async () => null),
+        WriteDocumentsIndex: vi.fn(async () => undefined),
+        ShowDocument: vi.fn(async () => undefined),
+        RemoveDocument: vi.fn(async (id: string) => move(saved, bin, id)),
+        PutBackDocument: vi.fn(async (id: string) => move(bin, saved, id)),
+        ForgetRemovedDocument: vi.fn(async (id: string) => void bin.delete(id)),
+        ListRemovedDocuments: vi.fn(async () =>
             [...bin].map(([id, file]) => ({id, savedAt: file.savedAt, removedAt: '2026-11-04T09:00:00Z', size: 1, hasPicture: false})),
         ),
-        ReadRemovedProp: vi.fn(async (id: string) => bytes(bin.get(id)?.contents ?? '')),
+        ReadRemovedDocument: vi.fn(async (id: string) => bytes(bin.get(id)?.contents ?? '')),
     }
 }
 
@@ -144,7 +144,7 @@ describe('Your notes page', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Show in folder'}))
 
-        await waitFor(() => expect(app.ShowProp).toHaveBeenCalledWith('shop'))
+        await waitFor(() => expect(app.ShowDocument).toHaveBeenCalledWith('shop'))
     })
 })
 
@@ -192,11 +192,11 @@ describe('removing documents', () => {
         fireEvent.click(await screen.findByRole('button', {name: 'Recently removed (1)'}))
         fireEvent.click(screen.getByRole('button', {name: 'Remove Shopping for good'}))
 
-        expect(app.ForgetRemovedProp).not.toHaveBeenCalled()
+        expect(app.ForgetRemovedDocument).not.toHaveBeenCalled()
 
         fireEvent.click(within(screen.getByRole('group', {name: /Remove “Shopping” for good/})).getByRole('button', {name: 'Remove for good'}))
 
-        await waitFor(() => expect(app.ForgetRemovedProp).toHaveBeenCalledWith('shop'))
+        await waitFor(() => expect(app.ForgetRemovedDocument).toHaveBeenCalledWith('shop'))
     })
 })
 
@@ -208,12 +208,12 @@ describe('copying a document', () => {
 
         await waitFor(() => expect(tile('Shopping copy')).toBeInTheDocument())
 
-        const [[copyId, contents]] = app.WriteProp.mock.calls
+        const [[copyId, contents]] = app.WriteDocument.mock.calls
         const copy = JSON.parse(new TextDecoder().decode(new Uint8Array(contents)))
 
         expect(copy.name).toBe('Shopping copy')
         expect(copy.createdAt).not.toBe('2026-10-02T09:00:00.000Z')
-        expect(app.CopyPropPicture).toHaveBeenCalledWith('shop', copyId)
+        expect(app.CopyDocumentPicture).toHaveBeenCalledWith('shop', copyId)
         expect(screen.getByRole('complementary', {name: 'About Shopping copy'})).toBeInTheDocument()
         expect(app.saved.get('shop')?.contents).toBe(documentOf('Shopping', 'Milk'))
     })
@@ -274,7 +274,7 @@ describe('ticking several documents', () => {
 describe('the backup line in the panel', () => {
     it('says whether the picked document is backed up to the cloud', async () => {
         const status = vi.fn(async (_target: unknown, id: string) => (id === 'shop' ? 'backed-up' : 'changed'))
-        fakeDesktop({...app, CloudPropStatus: status})
+        fakeDesktop({...app, CloudDocumentStatus: status})
         useSettingsStore.setState({cloudBackup: {...DEFAULT_CLOUD_BACKUP, service: 'r2', endpoint: 'abc.r2.cloudflarestorage.com', bucket: 'b'}})
 
         await showPage()

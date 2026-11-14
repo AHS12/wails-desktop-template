@@ -1,4 +1,4 @@
-package backend
+package backup
 
 // The cloud: storage the person already has, spoken to over the S3 API. There
 // is no server of the app's own.

@@ -12,6 +12,9 @@ import {desktopApp} from './shell'
 interface SettingsBindings {
     ReadSettings(): Promise<unknown>
     WriteSettings(contents: number[]): Promise<void>
+}
+
+interface LibraryFolderBindings {
     SetLibraryFolder(folder: string): Promise<void>
     GetLibraryInfo(): Promise<LibraryInfo>
     OpenLibraryFolder(): Promise<void>
@@ -19,7 +22,7 @@ interface SettingsBindings {
 
 export interface LibraryInfo {
     readonly folder: string
-    readonly props: number
+    readonly documents: number
     readonly bytes: number
 }
 
@@ -65,8 +68,10 @@ export async function writeSettingsFile(text: string): Promise<void> {
 
 export const hasDesktopStorage = () => bindings() !== undefined
 
-export const libraryInfo = async () => (await bindings()?.GetLibraryInfo()) ?? null
+const library = () => desktopApp<LibraryFolderBindings>('documents')
 
-export const openLibraryFolder = async () => bindings()?.OpenLibraryFolder()
+export const libraryInfo = async () => (await library()?.GetLibraryInfo()) ?? null
 
-export const setLibraryFolder = async (folder: string) => bindings()?.SetLibraryFolder(folder)
+export const openLibraryFolder = async () => library()?.OpenLibraryFolder()
+
+export const setLibraryFolder = async (folder: string) => library()?.SetLibraryFolder(folder)

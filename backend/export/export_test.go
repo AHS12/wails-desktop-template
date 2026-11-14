@@ -1,4 +1,4 @@
-package backend
+package export
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestWriteFilesCreatesTheFolderAndWritesEveryFile(t *testing.T) {
-	app := NewApp()
+	app := New()
 	folder := filepath.Join(t.TempDir(), "oak_01")
 
 	err := app.WriteFiles(folder, []ExportFile{
@@ -29,7 +29,7 @@ func TestWriteFilesCreatesTheFolderAndWritesEveryFile(t *testing.T) {
 }
 
 func TestWriteFilesRefusesANameThatIsAPath(t *testing.T) {
-	app := NewApp()
+	app := New()
 	root := t.TempDir()
 	folder := filepath.Join(root, "oak_01")
 
@@ -46,7 +46,7 @@ func TestWriteFilesRefusesANameThatIsAPath(t *testing.T) {
 }
 
 func TestExistingFilesFindsOnlyTheFilesAlreadyThere(t *testing.T) {
-	app := NewApp()
+	app := New()
 	folder := filepath.Join(t.TempDir(), "oak_01")
 
 	if err := app.WriteFiles(folder, []ExportFile{{Name: "oak_01_LOD0.glb", Contents: []byte("x")}}); err != nil {
@@ -64,7 +64,7 @@ func TestExistingFilesFindsOnlyTheFilesAlreadyThere(t *testing.T) {
 }
 
 func TestExistingFilesInAFolderThatIsNotThereYetIsEmpty(t *testing.T) {
-	found, err := NewApp().ExistingFiles(filepath.Join(t.TempDir(), "new"), []string{"oak_01_LOD0.glb"})
+	found, err := New().ExistingFiles(filepath.Join(t.TempDir(), "new"), []string{"oak_01_LOD0.glb"})
 	if err != nil {
 		t.Fatalf("ExistingFiles: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestExistingFilesInAFolderThatIsNotThereYetIsEmpty(t *testing.T) {
 }
 
 func TestExistingFilesRefusesANameThatIsAPath(t *testing.T) {
-	app := NewApp()
+	app := New()
 	root := t.TempDir()
 	folder := filepath.Join(root, "oak_01")
 
@@ -87,28 +87,5 @@ func TestExistingFilesRefusesANameThatIsAPath(t *testing.T) {
 		if _, err := app.ExistingFiles(folder, []string{name}); err == nil {
 			t.Fatalf("ExistingFiles accepted %q", name)
 		}
-	}
-}
-
-// Only the refusals are tested: a folder that is there would open a real window.
-func TestShowFolderRefusesWhatIsNotAFolder(t *testing.T) {
-	app := NewApp()
-	root := t.TempDir()
-	file := filepath.Join(root, "oak_01_LOD0.glb")
-
-	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, path := range []string{"", "  ", file, filepath.Join(root, "missing")} {
-		if err := app.ShowFolder(path); err == nil {
-			t.Fatalf("ShowFolder accepted %q", path)
-		}
-	}
-}
-
-func TestChooseFolderBeforeStartupIsAnError(t *testing.T) {
-	if _, err := NewApp().ChooseFolder("Export", ""); err == nil {
-		t.Fatal("ChooseFolder succeeded before Startup; it must report an error")
 	}
 }

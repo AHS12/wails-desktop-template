@@ -30,14 +30,9 @@ type App struct {
 	wails  *application.App
 	window *application.WebviewWindow
 
-	// libraryRoot overrides where the tree library lives. It is empty in the
-	// running app, which then uses the folder under the user config directory;
-	// tests set it to a scratch folder so they never touch the real one.
-	libraryRoot string
-
-	// draftRoot overrides where the unsaved draft lives, the same way
-	// libraryRoot overrides the library. It is empty in the running app.
-	draftRoot string
+	// dataRoot overrides the app's data folder, where the settings, the draft and
+	// each feature's files live. It is empty in the running app; tests set it.
+	dataRoot string
 
 	// windowStatePath is where the window's size and place are kept. It stays
 	// empty until rememberWindow, so tests never reach for a window.
@@ -66,9 +61,10 @@ type App struct {
 	// again. It is set by ConfirmClose and read by BeforeClose.
 	allowClose bool
 
-	// backupDue records that an automatic backup may be due, so a close goes
-	// through the interface, which runs it first. It is set by SetBackupDue.
-	backupDue bool
+	// busy names what a feature still has to do before the app closes, such as an
+	// automatic backup that may be due, or is empty. While it isn't, a close goes
+	// through the interface, which finishes the work first. It is set by SetBusy.
+	busy string
 
 	// closeToTray records that the close button hides the window rather than
 	// closing the app. It is set by SetCloseToTray. See tray.go.
@@ -78,14 +74,6 @@ type App struct {
 	// than on the taskbar. It is set by SetMinimiseToTray.
 	minimiseToTray bool
 	trayIcon
-
-	// secrets keeps the cloud backup keys. It is nil in the running app, which
-	// then uses the system's keychain; tests set it so they never touch it.
-	secrets secretStore
-
-	// cloudStoreFor makes the storage client. It is nil in the running app,
-	// which then uses the S3 client; tests set it to a fake.
-	cloudStoreFor func(target CloudTarget, keys cloudKeys) (objectStore, error)
 
 	// updateAPI, updateRoot and appFolder override where updates are looked for,
 	// downloaded and installed, and startInstaller overrides how one is started.
@@ -233,14 +221,15 @@ func (a *App) SetUnsaved(unsaved bool) {
 	a.unsaved = unsaved
 }
 
-// SetBackupDue tells the close guard whether an automatic backup may be due.
-// While it is, closing asks the interface first, as unsaved work does, and the
-// interface backs up before calling ConfirmClose.
-func (a *App) SetBackupDue(due bool) {
+// SetBusy tells the close guard that a feature has work to finish before the app
+// closes, such as a backup that may be due, by naming it, or that it has none, with
+// "". While something is named, closing asks the interface first, as unsaved work
+// does, and the interface finishes the work before calling ConfirmClose.
+func (a *App) SetBusy(reason string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	a.backupDue = due
+	a.busy = reason
 }
 
 // hasUnsavedChanges reports what SetUnsaved last stored.
@@ -266,11 +255,11 @@ func (a *App) beforeClose() bool {
 	// released: emitting an event wakes the interface, whose answer comes back
 	// through ConfirmClose and needs the same mutex.
 	a.mu.Lock()
-	unsaved, due, allowed, ctx := a.unsaved, a.backupDue, a.allowClose, a.ctx
+	unsaved, busy, allowed, ctx := a.unsaved, a.busy != "", a.allowClose, a.ctx
 	a.mu.Unlock()
 
 	// No context means the app never started, so there is no interface to ask.
-	if (!unsaved && !due) || allowed || ctx == nil {
+	if (!unsaved && !busy) || allowed || ctx == nil {
 		// This close goes ahead, through the update installer's restart too.
 		a.saveWindow()
 		return false

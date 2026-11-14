@@ -20,7 +20,7 @@ beforeEach(() => {
         FolderExists: vi.fn(async () => true),
         BackUpToFile: vi.fn(async () => ({props: 3, bytes: 10})),
         PruneFolderBackups: vi.fn(async () => 0),
-        SetBackupDue: vi.fn(async () => undefined),
+        SetBusy: vi.fn(async () => undefined),
         StopBackup: vi.fn(async () => undefined),
         WriteSettings: vi.fn(async () => undefined),
     }
@@ -131,11 +131,11 @@ describe('backing up to the cloud by itself', () => {
 
     it('holds the close for a cloud backup only when something changed', async () => {
         await useBackupStore.getState().refreshBackupDue()
-        expect(app.SetBackupDue).toHaveBeenLastCalledWith(true)
+        expect(app.SetBusy).toHaveBeenLastCalledWith('backup')
 
         await useBackupStore.getState().runCloudBackup()
         await useBackupStore.getState().refreshBackupDue()
-        expect(app.SetBackupDue).toHaveBeenLastCalledWith(false)
+        expect(app.SetBusy).toHaveBeenLastCalledWith('')
     })
 })
 

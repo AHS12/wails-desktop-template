@@ -1,16 +1,17 @@
-package backend
+package backup
 
-// Backing up to the cloud, and restoring from it (spec 16, section 5).
+// Backing up to the cloud, and restoring from it. Cloud backup lives in the files
+// named cloud*.go; removing them and their frontend leaves backups to a file and a folder.
 //
 // The bucket holds the same layout as a backup file, loose rather than zipped,
 // so a backup only uploads what changed:
 //
-//	<folder>/backup.json         each file's size, checksum and time saved
-//	<folder>/props/<id>.json     the prop, byte for byte, and its picture
-//	<folder>/removed/<id>.json   a mark that a computer removed the prop
-//	<folder>/palettes.json
+//	<folder>/backup.json             each file's size, checksum and time saved
+//	<folder>/documents/<id>.json     the document, byte for byte, and its picture
+//	<folder>/removed/<id>.json       a mark that a computer removed the document
+//	<folder>/extras.json
 //
-// The objects are the truth and backup.json a shortcut: each prop also
+// The objects are the truth and backup.json a shortcut: each document also
 // carries its checksum and time saved as metadata, so backup.json can be
 // rebuilt from a listing, and two computers writing it at once lose nothing.
 // Nothing is ever deleted from the bucket.
@@ -28,6 +29,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"wails-desktop-template/backend/documents"
+	"wails-desktop-template/backend/fsutil"
 
 	"wails-desktop-template/appconfig"
 )
@@ -42,14 +45,14 @@ const (
 
 // CloudSummary says what a backup to the cloud did.
 type CloudSummary struct {
-	// Props is how many props the backup holds from this computer.
-	Props int `json:"props"`
+	// Documents is how many documents the backup holds from this computer.
+	Documents int `json:"documents"`
 	// Uploaded is how many files went up this time.
 	Uploaded int `json:"uploaded"`
-	// ChangedElsewhere is how many props were left as they are in the
+	// ChangedElsewhere is how many documents were left as they are in the
 	// bucket, because another computer saved them later.
 	ChangedElsewhere int `json:"changedElsewhere"`
-	// Removed is how many props were marked as removed on this computer.
+	// Removed is how many documents were marked as removed on this computer.
 	Removed int `json:"removed"`
 }
 
@@ -57,17 +60,17 @@ type CloudSummary struct {
 // changed without asking the bucket about every file. It belongs to one
 // target: pointing cloud backup elsewhere starts it afresh.
 type backupState struct {
-	Target   string            `json:"target"`
-	Files    map[string]string `json:"files"`
-	Palettes string            `json:"palettes"`
+	Target string            `json:"target"`
+	Files  map[string]string `json:"files"`
+	Extras string            `json:"extras"`
 }
 
 // CheckCloudBackup checks the target and the saved keys end to end: the
 // bucket is there, a small file can be written and read back, and the folder
 // can be listed. The file is left, not deleted, so keys without delete
 // permission pass; it's the same small file each time.
-func (a *App) CheckCloudBackup(target CloudTarget) error {
-	store, err := a.cloudStore(target)
+func (s *Service) CheckCloudBackup(target CloudTarget) error {
+	store, err := s.cloudStore(target)
 	if err != nil {
 		return err
 	}
@@ -98,19 +101,19 @@ func (a *App) CheckCloudBackup(target CloudTarget) error {
 	return err
 }
 
-// BackUpToCloud uploads every file of the saved props folder that changed
-// since this computer last did, and the palettes if they changed. A prop that
+// BackUpToCloud uploads every file of the library that changed
+// since this computer last did, and the extras if they changed. A document that
 // this computer uploaded before and no longer has is marked as removed, never
-// deleted. A prop another computer saved later is left as it is.
-func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion string) (CloudSummary, error) {
+// deleted. A document another computer saved later is left as it is.
+func (s *Service) BackUpToCloud(target CloudTarget, extras []byte, appVersion string) (CloudSummary, error) {
 	backupStop.Store(false)
 
-	store, err := a.cloudStore(target)
+	store, err := s.cloudStore(target)
 	if err != nil {
 		return CloudSummary{}, err
 	}
 
-	dir, err := a.libraryDir()
+	dir, err := s.library.LibraryFolder()
 	if err != nil {
 		return CloudSummary{}, err
 	}
@@ -120,7 +123,7 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 		return CloudSummary{}, err
 	}
 
-	state := a.loadBackupState(target)
+	state := s.loadBackupState(target)
 	ctx := context.Background()
 
 	remote, err := readCloudManifest(ctx, store, target)
@@ -134,12 +137,12 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 
 	for index, file := range local {
 		if backupStop.Load() {
-			a.saveBackupState(state)
+			s.saveBackupState(state)
 			return summary, errBackupStopped
 		}
 
-		if isTopLevelProp(file.Path) {
-			summary.Props++
+		if isTopLevelDocument(file.Path) {
+			summary.Documents++
 		}
 
 		there, known := entries[file.Path]
@@ -157,8 +160,8 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 			}
 
 			meta := map[string]string{metaSHA256: file.SHA256, metaSavedAt: file.SavedAt}
-			if err := store.put(ctx, cloudKey(target, backupPropsFolder+file.Path), contents, meta); err != nil {
-				a.saveBackupState(state)
+			if err := store.put(ctx, cloudKey(target, backupDocumentsFolder+file.Path), contents, meta); err != nil {
+				s.saveBackupState(state)
 				return summary, err
 			}
 
@@ -167,7 +170,7 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 			summary.Uploaded++
 		}
 
-		a.emitBackupProgress(index+1, len(local))
+		s.emitBackupProgress(index+1, len(local))
 	}
 
 	present := make(map[string]bool, len(local))
@@ -183,14 +186,14 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 		delete(state.Files, uploaded)
 
 		entry, known := entries[uploaded]
-		if !isTopLevelProp(uploaded) || !known || entry.RemovedAt != "" {
+		if !isTopLevelDocument(uploaded) || !known || entry.RemovedAt != "" {
 			continue
 		}
 
-		id := strings.TrimSuffix(uploaded, treeJSONSuffix)
+		id := strings.TrimSuffix(uploaded, documents.JSONSuffix)
 		mark, _ := json.Marshal(map[string]string{"removedAt": now})
 
-		if err := store.put(ctx, cloudKey(target, cloudRemovedFolder+id+treeJSONSuffix), mark, nil); err != nil {
+		if err := store.put(ctx, cloudKey(target, cloudRemovedFolder+id+documents.JSONSuffix), mark, nil); err != nil {
 			return summary, err
 		}
 
@@ -199,23 +202,23 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 		summary.Removed++
 	}
 
-	palettesChanged := false
+	extrasChanged := false
 
-	if len(palettes) > 0 {
-		sum := sha256.Sum256(palettes)
-		if hex.EncodeToString(sum[:]) != state.Palettes {
-			if err := store.put(ctx, cloudKey(target, backupPalettesName), palettes, nil); err != nil {
+	if len(extras) > 0 {
+		sum := sha256.Sum256(extras)
+		if hex.EncodeToString(sum[:]) != state.Extras {
+			if err := store.put(ctx, cloudKey(target, backupExtrasName), extras, nil); err != nil {
 				return summary, err
 			}
 
-			state.Palettes = hex.EncodeToString(sum[:])
-			palettesChanged = true
+			state.Extras = hex.EncodeToString(sum[:])
+			extrasChanged = true
 		}
 	}
 
 	// Nothing new, and the bucket already has its list: nothing to write.
-	if summary.Uploaded == 0 && summary.Removed == 0 && !palettesChanged && len(remote.Files) > 0 && remote.App != "" {
-		a.saveBackupState(state)
+	if summary.Uploaded == 0 && summary.Removed == 0 && !extrasChanged && len(remote.Files) > 0 && remote.App != "" {
+		s.saveBackupState(state)
 		return summary, nil
 	}
 
@@ -234,19 +237,19 @@ func (a *App) BackUpToCloud(target CloudTarget, palettes []byte, appVersion stri
 		return summary, err
 	}
 
-	a.saveBackupState(state)
+	s.saveBackupState(state)
 
 	return summary, nil
 }
 
 // OpenCloudBackup downloads the cloud backup into the holding folder and says
-// what's in it, as OpenBackupFile does for a file. Props removed on a computer
+// what's in it, as OpenBackupFile does for a file. Documents removed on a computer
 // come down too, marked "removed" when they aren't here, so they can still be
 // brought back.
-func (a *App) OpenCloudBackup(target CloudTarget) (HeldBackup, error) {
+func (s *Service) OpenCloudBackup(target CloudTarget) (HeldBackup, error) {
 	backupStop.Store(false)
 
-	store, err := a.cloudStore(target)
+	store, err := s.cloudStore(target)
 	if err != nil {
 		return HeldBackup{}, err
 	}
@@ -258,7 +261,7 @@ func (a *App) OpenCloudBackup(target CloudTarget) (HeldBackup, error) {
 		return HeldBackup{}, err
 	}
 
-	holding, err := a.freshHoldingDir()
+	holding, err := s.freshHoldingDir()
 	if err != nil {
 		return HeldBackup{}, err
 	}
@@ -267,23 +270,23 @@ func (a *App) OpenCloudBackup(target CloudTarget) (HeldBackup, error) {
 
 	for index, entry := range manifest.Files {
 		if backupStop.Load() {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, errBackupStopped
 		}
 
-		relative, err := backupEntryPath(backupPropsFolder + entry.Path)
+		relative, err := backupEntryPath(backupDocumentsFolder + entry.Path)
 		if err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
-		contents, err := store.get(ctx, cloudKey(target, backupPropsFolder+relative))
+		contents, err := store.get(ctx, cloudKey(target, backupDocumentsFolder+relative))
 		if errors.Is(err, errNoSuchObject) {
 			continue
 		}
 
 		if err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
@@ -298,51 +301,57 @@ func (a *App) OpenCloudBackup(target CloudTarget) (HeldBackup, error) {
 		}
 
 		if err := writeFileKeepingTime(heldPath, contents, at); err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
-		if entry.RemovedAt != "" && isTopLevelProp(relative) {
-			removed[strings.TrimSuffix(relative, treeJSONSuffix)] = true
+		if entry.RemovedAt != "" && isTopLevelDocument(relative) {
+			removed[strings.TrimSuffix(relative, documents.JSONSuffix)] = true
 		}
 
-		a.emitBackupProgress(index+1, len(manifest.Files))
+		s.emitBackupProgress(index+1, len(manifest.Files))
 	}
 
 	held := HeldBackup{App: manifest.App, MadeAt: manifest.MadeAt}
 
-	if palettes, err := store.get(ctx, cloudKey(target, backupPalettesName)); err == nil {
-		held.Palettes = string(palettes)
+	if extras, err := store.get(ctx, cloudKey(target, backupExtrasName)); err == nil {
+		held.Extras = string(extras)
 	} else if !errors.Is(err, errNoSuchObject) {
-		a.ClearHolding()
+		s.ClearHolding()
 		return HeldBackup{}, err
 	}
 
-	held.Props, err = a.heldProps(holding)
+	held.Documents, err = s.heldDocuments(holding)
 	if err != nil {
 		return HeldBackup{}, err
 	}
 
-	for index, prop := range held.Props {
-		if removed[prop.ID] && prop.Status == "new" {
-			held.Props[index].Status = "removed"
+	for index, document := range held.Documents {
+		if removed[document.ID] && document.Status == "new" {
+			held.Documents[index].Status = "removed"
 		}
 	}
 
 	return held, nil
 }
 
-// CloudPropStatus says whether one prop is in the cloud backup as it is now:
+// CloudDocumentStatus says whether one document is in the cloud backup as it is now:
 // "backed-up", "changed" since this computer last backed it up, or "not-yet".
-// It reads only what this computer remembers uploading and the prop itself, so
-// it's quick enough for the Your props panel and needs no connection.
-func (a *App) CloudPropStatus(target CloudTarget, id string) (string, error) {
-	path, err := a.treePath(id, treeJSONSuffix)
+// It reads only what this computer remembers uploading and the document itself, so
+// it's quick enough for the library page and needs no connection.
+func (s *Service) CloudDocumentStatus(target CloudTarget, id string) (string, error) {
+	if err := fsutil.CheckID(id); err != nil {
+		return "", err
+	}
+
+	folder, err := s.library.LibraryFolder()
 	if err != nil {
 		return "", err
 	}
 
-	uploaded, known := a.loadBackupState(target).Files[id+treeJSONSuffix]
+	path := filepath.Join(folder, id+documents.JSONSuffix)
+
+	uploaded, known := s.loadBackupState(target).Files[id+documents.JSONSuffix]
 	if !known {
 		return "not-yet", nil
 	}
@@ -360,14 +369,14 @@ func (a *App) CloudPropStatus(target CloudTarget, id string) (string, error) {
 	return "backed-up", nil
 }
 
-func (a *App) cloudStore(target CloudTarget) (objectStore, error) {
-	keys, err := a.secretsOrDefault().load()
+func (s *Service) cloudStore(target CloudTarget) (objectStore, error) {
+	keys, err := s.loadKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	if a.cloudStoreFor != nil {
-		return a.cloudStoreFor(target, keys)
+	if s.cloudStoreFor != nil {
+		return s.cloudStoreFor(target, keys)
 	}
 
 	return newS3Store(target, keys)
@@ -383,8 +392,8 @@ func cloudKey(target CloudTarget, name string) string {
 	return folder + "/" + name
 }
 
-func isTopLevelProp(relative string) bool {
-	return !strings.Contains(relative, "/") && strings.HasSuffix(relative, treeJSONSuffix)
+func isTopLevelDocument(relative string) bool {
+	return !strings.Contains(relative, "/") && strings.HasSuffix(relative, documents.JSONSuffix)
 }
 
 // localBackupFiles is every file a backup holds, with its checksum and time.
@@ -441,12 +450,12 @@ func readCloudManifest(ctx context.Context, store objectStore, target CloudTarge
 	return rebuildCloudManifest(ctx, store, target)
 }
 
-// rebuildCloudManifest makes backup.json again from a listing and each prop's
+// rebuildCloudManifest makes backup.json again from a listing and each document's
 // metadata, and the removed marks.
 func rebuildCloudManifest(ctx context.Context, store objectStore, target CloudTarget) (backupManifest, error) {
 	manifest := backupManifest{Format: backupFormat, Files: []backupFile{}}
 
-	objects, err := store.list(ctx, cloudKey(target, backupPropsFolder))
+	objects, err := store.list(ctx, cloudKey(target, backupDocumentsFolder))
 	if err != nil {
 		return manifest, err
 	}
@@ -469,12 +478,12 @@ func rebuildCloudManifest(ctx context.Context, store objectStore, target CloudTa
 		}
 
 		if json.Unmarshal(contents, &body) == nil {
-			removedAt[strings.TrimSuffix(path.Base(mark.Key), treeJSONSuffix)] = body.RemovedAt
+			removedAt[strings.TrimSuffix(path.Base(mark.Key), documents.JSONSuffix)] = body.RemovedAt
 		}
 	}
 
 	for _, object := range objects {
-		relative := strings.TrimPrefix(object.Key, cloudKey(target, backupPropsFolder))
+		relative := strings.TrimPrefix(object.Key, cloudKey(target, backupDocumentsFolder))
 
 		meta, err := store.head(ctx, object.Key)
 		if err != nil {
@@ -483,8 +492,8 @@ func rebuildCloudManifest(ctx context.Context, store objectStore, target CloudTa
 
 		entry := backupFile{Path: relative, Size: object.Size, SHA256: meta[metaSHA256], SavedAt: meta[metaSavedAt]}
 
-		// A prop saved again after it was marked removed is back.
-		if mark, marked := removedAt[strings.TrimSuffix(relative, treeJSONSuffix)]; marked && isTopLevelProp(relative) && mark > entry.SavedAt {
+		// A document saved again after it was marked removed is back.
+		if mark, marked := removedAt[strings.TrimSuffix(relative, documents.JSONSuffix)]; marked && isTopLevelDocument(relative) && mark > entry.SavedAt {
 			entry.RemovedAt = mark
 		}
 
@@ -525,22 +534,22 @@ func targetName(target CloudTarget) string {
 	return strings.Join([]string{target.Service, target.Endpoint, target.Bucket, strings.Trim(target.Folder, "/ ")}, "|")
 }
 
-func (a *App) backupStatePath() (string, error) {
-	settings, err := a.settingsPath()
+func (s *Service) backupStatePath() (string, error) {
+	data, err := s.shell.DataFolder()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(filepath.Dir(settings), backupStateName), nil
+	return filepath.Join(data, backupStateName), nil
 }
 
 // loadBackupState reads what this computer last uploaded to target. Anything
 // missing, damaged or for another target starts afresh, which only costs
 // comparing checksums with the bucket's list.
-func (a *App) loadBackupState(target CloudTarget) backupState {
+func (s *Service) loadBackupState(target CloudTarget) backupState {
 	fresh := backupState{Target: targetName(target), Files: map[string]string{}}
 
-	statePath, err := a.backupStatePath()
+	statePath, err := s.backupStatePath()
 	if err != nil {
 		return fresh
 	}
@@ -558,8 +567,8 @@ func (a *App) loadBackupState(target CloudTarget) backupState {
 	return state
 }
 
-func (a *App) saveBackupState(state backupState) {
-	statePath, err := a.backupStatePath()
+func (s *Service) saveBackupState(state backupState) {
+	statePath, err := s.backupStatePath()
 	if err != nil {
 		return
 	}
@@ -570,7 +579,7 @@ func (a *App) saveBackupState(state backupState) {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err == nil {
-		_ = writeFileAtomic(statePath, contents)
+		_ = fsutil.WriteAtomic(statePath, contents)
 	}
 }
 

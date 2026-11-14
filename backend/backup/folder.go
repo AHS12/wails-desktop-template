@@ -1,4 +1,4 @@
-package backend
+package backup
 
 // What automatic backups to a folder need from Go: a cheap way to tell whether
 // anything changed since the last one, and keeping only the newest few. The
@@ -21,10 +21,10 @@ import (
 var folderBackupPattern = regexp.MustCompile(`^` + regexp.QuoteMeta(appconfig.Current().ID) + `-backup-\d{4}-\d{2}-\d{2}\.zip$`)
 
 // LibraryFingerprint sums up every file a backup would hold: its path, size and
-// time saved. It changes whenever a prop is saved, renamed, copied, removed or
+// time saved. It changes whenever a document is saved, renamed, copied, removed or
 // put back, without reading any of them.
-func (a *App) LibraryFingerprint() (string, error) {
-	dir, err := a.libraryDir()
+func (s *Service) LibraryFingerprint() (string, error) {
+	dir, err := s.library.LibraryFolder()
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func (a *App) LibraryFingerprint() (string, error) {
 
 // FolderExists says whether folder is there now, such as a drive that may not
 // be plugged in. It never creates it.
-func (a *App) FolderExists(folder string) bool {
+func (s *Service) FolderExists(folder string) bool {
 	if folder == "" {
 		return false
 	}
@@ -63,7 +63,7 @@ func (a *App) FolderExists(folder string) bool {
 // PruneFolderBackups removes the oldest backups the app wrote in folder until
 // keep are left, and says how many went. Their names hold the date, so the
 // oldest sort first. Files with any other name are never touched.
-func (a *App) PruneFolderBackups(folder string, keep int) (int, error) {
+func (s *Service) PruneFolderBackups(folder string, keep int) (int, error) {
 	if err := checkPath(folder); err != nil {
 		return 0, err
 	}

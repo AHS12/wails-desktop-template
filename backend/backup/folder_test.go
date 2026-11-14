@@ -1,7 +1,6 @@
-package backend
+package backup
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,7 +8,7 @@ import (
 	"time"
 )
 
-func TestTheFingerprintChangesOnlyWhenAPropDoes(t *testing.T) {
+func TestTheFingerprintChangesOnlyWhenADocumentDoes(t *testing.T) {
 	app := newBackupApp(t)
 	savedAtTime(t, app, "oak", time.Date(2026, time.March, 1, 9, 0, 0, 0, time.UTC))
 
@@ -23,22 +22,22 @@ func TestTheFingerprintChangesOnlyWhenAPropDoes(t *testing.T) {
 		t.Fatal("the fingerprint changed with nothing saved")
 	}
 
-	if err := app.WriteProp("oak", []byte(`{"name":"changed"}`), nil); err != nil {
+	if err := app.WriteDocument("oak", []byte(`{"name":"changed"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 
 	saved, _ := app.LibraryFingerprint()
 	if saved == first {
-		t.Fatal("saving a prop left the fingerprint the same")
+		t.Fatal("saving a document left the fingerprint the same")
 	}
 
-	if err := app.RemoveProp("oak"); err != nil {
+	if err := app.RemoveDocument("oak"); err != nil {
 		t.Fatal(err)
 	}
 
 	removed, _ := app.LibraryFingerprint()
 	if removed == saved {
-		t.Fatal("removing a prop left the fingerprint the same")
+		t.Fatal("removing a document left the fingerprint the same")
 	}
 }
 
@@ -104,26 +103,5 @@ func TestAMissingFolderIsNotThere(t *testing.T) {
 
 	if !app.FolderExists(t.TempDir()) {
 		t.Fatal("a folder that is there was said to be missing")
-	}
-}
-
-func TestADueBackupHoldsTheCloseForTheInterface(t *testing.T) {
-	recorder := &recordingRuntime{}
-	app := &App{ctx: context.Background(), closeRuntime: recorder}
-
-	app.SetBackupDue(true)
-
-	if !app.beforeClose() {
-		t.Fatal("a close with a backup due went straight through")
-	}
-
-	if len(recorder.events) != 1 || recorder.events[0] != CloseRequestedEvent {
-		t.Fatalf("events = %v, want the close question", recorder.events)
-	}
-
-	app.SetBackupDue(false)
-
-	if app.beforeClose() {
-		t.Fatal("a close with nothing due was held")
 	}
 }

@@ -21,10 +21,16 @@ interface WailsApp {
     ReadFile(path: string): Promise<number[]>
     WriteFile(path: string, contents: number[]): Promise<void>
     ChooseFolder(title: string, start: string): Promise<string>
-    WriteFiles(folder: string, files: {name: string; contents: number[]}[]): Promise<void>
-    ExistingFiles(folder: string, names: string[]): Promise<string[]>
     ShowFolder(folder: string): Promise<void>
 }
+
+/** The export service: writing an export's files, and saying which are there already. */
+interface ExportBindings {
+    WriteFiles(folder: string, files: {name: string; contents: number[]}[]): Promise<void>
+    ExistingFiles(folder: string, names: string[]): Promise<string[]>
+}
+
+const exports = () => desktopApp<ExportBindings>('export')
 
 function desktop(): WailsApp | undefined {
     return desktopApp<WailsApp>()
@@ -139,7 +145,7 @@ export function writeExportFiles(
  * file afresh, so it never replaces one.
  */
 export async function existingExportFiles(folder: string, name: string, names: readonly string[]): Promise<string[]> {
-    const app = desktop()
+    const app = exports()
 
     return app ? app.ExistingFiles(`${folder}/${name}`, [...names]) : []
 }
@@ -154,7 +160,7 @@ export async function writeFilesTo(
     folder: string,
     files: readonly {name: string; bytes: Uint8Array}[],
 ): Promise<void> {
-    const app = desktop()
+    const app = exports()
 
     if (!app) {
         for (const file of files) {

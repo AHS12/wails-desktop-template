@@ -11,6 +11,10 @@ import (
 
 	"wails-desktop-template/appconfig"
 	"wails-desktop-template/backend"
+	"wails-desktop-template/backend/backup"
+	"wails-desktop-template/backend/documents"
+	"wails-desktop-template/backend/export"
+	"wails-desktop-template/backend/secrets"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -21,6 +25,20 @@ var assets embed.FS
 func main() {
 	identity := appconfig.Current()
 	service := backend.NewApp()
+	shell := backend.ShellOf(service)
+	library := documents.New(shell)
+
+	// Each optional feature is a service of its own, in its own folder. Leaving
+	// one out means deleting its lines here and its folders: see
+	// docs/removing-features.md.
+	backups := backup.New(shell, library, secrets.Keychain{})
+	exports := export.New()
+
+	// Pictures are served from disk, not from the build, longest address first.
+	pictures := []pictureRoute{
+		{backup.HeldPicturePrefix, backup.HeldPictureHandler(backups)},
+		{documents.PicturePathPrefix, documents.PictureHandler(library)},
+	}
 
 	dist, err := fs.Sub(assets, "frontend/dist")
 	if err != nil {
@@ -32,17 +50,19 @@ func main() {
 		Description: identity.Description,
 		Services: []application.Service{
 			application.NewService(service),
+			application.NewService(library),
+			application.NewService(backups),
+			application.NewService(exports),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(dist),
-			// Pictures of saved documents come from disk, not from the build.
 			Middleware: func(next http.Handler) http.Handler {
-				pictures := backend.PictureHandler(service)
-
 				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-					if strings.HasPrefix(request.URL.Path, backend.PicturePathPrefix) {
-						pictures.ServeHTTP(writer, request)
-						return
+					for _, route := range pictures {
+						if strings.HasPrefix(request.URL.Path, route.prefix) {
+							route.handler.ServeHTTP(writer, request)
+							return
+						}
 					}
 
 					next.ServeHTTP(writer, request)
@@ -56,6 +76,9 @@ func main() {
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
+		},
+		Windows: application.WindowsOptions{
+			AdditionalBrowserArgs: browserArgs(),
 		},
 	})
 
@@ -89,4 +112,10 @@ func singleInstanceID(identity appconfig.Config) string {
 	}
 
 	return identity.BundleID
+}
+
+// pictureRoute sends requests under prefix to a feature's picture handler.
+type pictureRoute struct {
+	prefix  string
+	handler http.Handler
 }

@@ -82,7 +82,7 @@ test: test-go test-frontend ## Run every test
 
 # The main package embeds the frontend build, so it's left to build-check.
 test-go: ## Run the Go tests
-	go test ./appconfig/ ./backend/ ./tools/...
+	go test ./appconfig/... ./backend/... ./tools/...
 
 test-frontend: ## Run the frontend tests
 	$(VITEST) run

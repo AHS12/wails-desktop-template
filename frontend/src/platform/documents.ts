@@ -8,9 +8,6 @@
  * Pictures aren't read here at all. Go serves them at an address of their own, so a page
  * only loads the ones on screen. What each file holds comes from the index of saved
  * documents, and only files that changed since are read again.
- *
- * Go's methods are still named for props, as in the app this came from. They are renamed with the
- * backend in phase 4 of the plan.
  */
 
 import {bytesOfDataUrl} from '../core/files'
@@ -20,9 +17,9 @@ import {textFromBinding} from './bytes'
 import {desktopApp} from './shell'
 
 const BINDINGS = (): LibraryBindings | undefined =>
-    desktopApp<LibraryBindings>()
+    desktopApp<LibraryBindings>('documents')
 
-interface PropFile {
+interface DocumentFile {
     id: string
     savedAt: string
     size: number
@@ -30,21 +27,21 @@ interface PropFile {
 }
 
 interface LibraryBindings {
-    ListProps(): Promise<PropFile[] | null>
-    ReadProp(id: string): Promise<unknown>
-    WriteProp(id: string, contents: number[], thumbnail: number[]): Promise<void>
-    WritePropPicture(id: string, picture: number[]): Promise<void>
-    DeleteProp(id: string): Promise<void>
-    ShowProp(id: string): Promise<void>
-    ReadPropsIndex(): Promise<unknown>
-    WritePropsIndex(contents: number[]): Promise<void>
-    RemoveProp(id: string): Promise<void>
-    PutBackProp(id: string): Promise<void>
-    ForgetRemovedProp(id: string): Promise<void>
-    ForgetOldRemovedProps(): Promise<void>
-    ListRemovedProps(): Promise<RemovedFile[] | null>
-    ReadRemovedProp(id: string): Promise<unknown>
-    CopyPropPicture(from: string, to: string): Promise<void>
+    ListDocuments(): Promise<DocumentFile[] | null>
+    ReadDocument(id: string): Promise<unknown>
+    WriteDocument(id: string, contents: number[], thumbnail: number[]): Promise<void>
+    WriteDocumentPicture(id: string, picture: number[]): Promise<void>
+    DeleteDocument(id: string): Promise<void>
+    ShowDocument(id: string): Promise<void>
+    ReadDocumentsIndex(): Promise<unknown>
+    WriteDocumentsIndex(contents: number[]): Promise<void>
+    RemoveDocument(id: string): Promise<void>
+    PutBackDocument(id: string): Promise<void>
+    ForgetRemovedDocument(id: string): Promise<void>
+    ForgetOldRemovedDocuments(): Promise<void>
+    ListRemovedDocuments(): Promise<RemovedFile[] | null>
+    ReadRemovedDocument(id: string): Promise<unknown>
+    CopyDocumentPicture(from: string, to: string): Promise<void>
 }
 
 interface RemovedFile {
@@ -85,11 +82,11 @@ export function isLibraryAvailable(): boolean {
 
 /** The address Go serves a document's picture at. The time saved keeps an old copy from showing. */
 export const pictureAddress = (id: string, savedAt: string): string =>
-    `/your-props/${encodeURIComponent(id)}.png?v=${encodeURIComponent(savedAt)}`
+    `/documents/${encodeURIComponent(id)}.png?v=${encodeURIComponent(savedAt)}`
 
 async function readIndex(bindings: LibraryBindings): Promise<string | null> {
     try {
-        return textFromBinding(await bindings.ReadPropsIndex())
+        return textFromBinding(await bindings.ReadDocumentsIndex())
     } catch {
         return null
     }
@@ -103,15 +100,15 @@ export async function listDocuments(): Promise<SavedDocument[]> {
         return []
     }
 
-    const [files, indexText] = await Promise.all([bindings.ListProps().then((list) => list ?? []), readIndex(bindings)])
+    const [files, indexText] = await Promise.all([bindings.ListDocuments().then((list) => list ?? []), readIndex(bindings)])
 
     const {index, summaries, changed} = await refreshDocumentsIndex(parseDocumentsIndex(indexText), files, async (id) =>
-        summarizeDocument(textFromBinding(await bindings.ReadProp(id))),
+        summarizeDocument(textFromBinding(await bindings.ReadDocument(id))),
     )
 
     if (changed) {
         // Losing the index only costs reading the files again next time.
-        void bindings.WritePropsIndex([...new TextEncoder().encode(serializeDocumentsIndex(index))]).catch(() => undefined)
+        void bindings.WriteDocumentsIndex([...new TextEncoder().encode(serializeDocumentsIndex(index))]).catch(() => undefined)
     }
 
     return files.map((file) => ({
@@ -131,12 +128,12 @@ export async function listRemovedDocuments(): Promise<RemovedDocument[]> {
         return []
     }
 
-    const files = (await bindings.ListRemovedProps()) ?? []
+    const files = (await bindings.ListRemovedDocuments()) ?? []
 
     // Recently removed is small and seldom opened, so it's read whole, without an index.
     return Promise.all(
         files.map(async (file) => ({
-            ...summarizeDocument(await bindings.ReadRemovedProp(file.id).then(textFromBinding, () => '')),
+            ...summarizeDocument(await bindings.ReadRemovedDocument(file.id).then(textFromBinding, () => '')),
             id: file.id,
             savedAt: file.savedAt,
             removedAt: file.removedAt,
@@ -147,7 +144,7 @@ export async function listRemovedDocuments(): Promise<RemovedDocument[]> {
 }
 
 const removedPictureAddress = (id: string, removedAt: string): string =>
-    `/your-props/removed/${encodeURIComponent(id)}.png?v=${encodeURIComponent(removedAt)}`
+    `/documents/removed/${encodeURIComponent(id)}.png?v=${encodeURIComponent(removedAt)}`
 
 function libraryBindings(): LibraryBindings {
     const bindings = BINDINGS()
@@ -160,18 +157,18 @@ function libraryBindings(): LibraryBindings {
 }
 
 /** Moves a document and its picture to Recently removed, where it can be put back. */
-export const removeDocument = (id: string): Promise<void> => libraryBindings().RemoveProp(id)
+export const removeDocument = (id: string): Promise<void> => libraryBindings().RemoveDocument(id)
 
-export const putBackDocument = (id: string): Promise<void> => libraryBindings().PutBackProp(id)
+export const putBackDocument = (id: string): Promise<void> => libraryBindings().PutBackDocument(id)
 
-export const forgetRemovedDocument = (id: string): Promise<void> => libraryBindings().ForgetRemovedProp(id)
+export const forgetRemovedDocument = (id: string): Promise<void> => libraryBindings().ForgetRemovedDocument(id)
 
 /** Forgets documents removed more than 30 days ago. Nothing to do in a browser. */
 export async function forgetOldRemovedDocuments(): Promise<void> {
-    await BINDINGS()?.ForgetOldRemovedProps()
+    await BINDINGS()?.ForgetOldRemovedDocuments()
 }
 
-export const copyDocumentPicture = (from: string, to: string): Promise<void> => libraryBindings().CopyPropPicture(from, to)
+export const copyDocumentPicture = (from: string, to: string): Promise<void> => libraryBindings().CopyDocumentPicture(from, to)
 
 /** A document's file text, ready for `parseDocument`. */
 export async function readDocument(id: string): Promise<string> {
@@ -181,7 +178,7 @@ export async function readDocument(id: string): Promise<string> {
         throw new LibraryUnavailableError()
     }
 
-    return textFromBinding(await bindings.ReadProp(id))
+    return textFromBinding(await bindings.ReadDocument(id))
 }
 
 /** Writes a document, and its picture when it has one. */
@@ -196,7 +193,7 @@ export async function writeDocument(
         throw new LibraryUnavailableError()
     }
 
-    await bindings.WriteProp(
+    await bindings.WriteDocument(
         id,
         [...new TextEncoder().encode(text)],
         thumbnail ? [...bytesOfDataUrl(thumbnail)] : [],
@@ -211,7 +208,7 @@ export async function writeDocumentPicture(id: string, picture: string): Promise
         throw new LibraryUnavailableError()
     }
 
-    await bindings.WritePropPicture(id, [...bytesOfDataUrl(picture)])
+    await bindings.WriteDocumentPicture(id, [...bytesOfDataUrl(picture)])
 }
 
 /** Shows the document's file in the system's file manager. */
@@ -222,7 +219,7 @@ export async function showDocumentFile(id: string): Promise<void> {
         throw new LibraryUnavailableError()
     }
 
-    await bindings.ShowProp(id)
+    await bindings.ShowDocument(id)
 }
 
 export async function deleteDocument(id: string): Promise<void> {
@@ -232,7 +229,7 @@ export async function deleteDocument(id: string): Promise<void> {
         throw new LibraryUnavailableError()
     }
 
-    await bindings.DeleteProp(id)
+    await bindings.DeleteDocument(id)
 }
 
 /** An id the library accepts: a file stem, safe on every platform. */

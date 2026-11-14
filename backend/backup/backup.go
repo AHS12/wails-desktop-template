@@ -1,16 +1,17 @@
-package backend
+package backup
 
-// Backups: the saved props folder in one zip a person can keep anywhere, and
-// the way back from one.
+// Package backup keeps the library safe: in one zip a person can keep anywhere,
+// in dated zips in a folder of their choosing, or in cloud storage they already
+// have, and brings it back from any of them.
 //
-// As everywhere in Go, props are bytes. A backup holds every file the app owns
-// in the saved props folder, byte for byte, with the time each was saved, and
-// the interface's palettes as it hands them over. Nothing here parses a prop.
+// As everywhere in Go, documents are bytes. A backup holds every file the app
+// owns in the library, byte for byte, with the time each was saved, and any
+// extra text the interface hands over. Nothing here parses a document.
 //
-// Restoring happens in two steps, so nothing reaches the saved props folder
-// before the person has seen what's in the backup: the zip is unpacked into a
-// holding folder beside the settings, never inside the props, and only what is
-// then chosen is moved across.
+// Restoring happens in two steps, so nothing reaches the library before the
+// person has seen what's in the backup: the zip is unpacked into a holding
+// folder in the data folder, never inside the library, and only what is then
+// chosen is moved across.
 
 import (
 	"archive/zip"
@@ -21,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,6 +30,10 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"wails-desktop-template/backend"
+	"wails-desktop-template/backend/documents"
+	"wails-desktop-template/backend/fsutil"
+	"wails-desktop-template/backend/secrets"
 
 	"wails-desktop-template/appconfig"
 )
@@ -37,9 +43,9 @@ const (
 	// higher one comes from a newer app and is refused.
 	backupFormat = 1
 
-	backupManifestName = "backup.json"
-	backupPalettesName = "palettes.json"
-	backupPropsFolder  = "props/"
+	backupManifestName    = "backup.json"
+	backupExtrasName      = "extras.json"
+	backupDocumentsFolder = "documents/"
 
 	// holdingFolderName is where a backup is unpacked before restoring.
 	holdingFolderName = "restoring"
@@ -48,7 +54,7 @@ const (
 	// and of how many.
 	BackupProgressEvent = "backup:progress"
 
-	// largestBackupFile is far more than any prop or picture needs, and stops
+	// largestBackupFile is far more than any document or picture needs, and stops
 	// a damaged or hostile zip from filling the disk while unpacking.
 	largestBackupFile = 64 << 20
 )
@@ -67,29 +73,29 @@ type backupManifest struct {
 	Files  []backupFile `json:"files"`
 }
 
-// backupFile is one file of the saved props folder in a backup. Path is
+// backupFile is one file of the library in a backup. Path is
 // relative to the folder, with forward slashes.
 type backupFile struct {
 	Path    string `json:"path"`
 	Size    int64  `json:"size"`
 	SHA256  string `json:"sha256"`
 	SavedAt string `json:"savedAt"`
-	// RemovedAt is set in a cloud backup when a computer that backed the prop
+	// RemovedAt is set in a cloud backup when a computer that backed the document
 	// up no longer has it. Its files stay, so it can still be brought back.
 	RemovedAt string `json:"removedAt,omitempty"`
 }
 
 // BackupSummary says what a backup to a file held.
 type BackupSummary struct {
-	Props int   `json:"props"`
-	Bytes int64 `json:"bytes"`
+	Documents int   `json:"documents"`
+	Bytes     int64 `json:"bytes"`
 }
 
-// HeldProp is one prop of an unpacked backup, as the restore screen lists it.
-// Status compares it with the saved prop of the same id: "new" when there is
+// HeldDocument is one document of an unpacked backup, as the restore screen lists it.
+// Status compares it with the saved document of the same id: "new" when there is
 // none, "same" when the bytes match, and "different" otherwise. A cloud backup
-// adds "removed", for a prop removed on a computer since it was backed up.
-type HeldProp struct {
+// adds "removed", for a document removed on a computer since it was backed up.
+type HeldDocument struct {
 	ID         string `json:"id"`
 	SavedAt    string `json:"savedAt"`
 	Size       int64  `json:"size"`
@@ -99,16 +105,17 @@ type HeldProp struct {
 
 // HeldBackup is an unpacked backup, waiting for the person to choose.
 type HeldBackup struct {
-	App      string     `json:"app"`
-	MadeAt   string     `json:"madeAt"`
-	Props    []HeldProp `json:"props"`
-	Palettes string     `json:"palettes"`
+	App       string         `json:"app"`
+	MadeAt    string         `json:"madeAt"`
+	Documents []HeldDocument `json:"documents"`
+	// Extras is the extra text the interface handed over when backing up.
+	Extras string `json:"extras"`
 }
 
-// RestoreChoice is one prop to bring in. With a CopyID, it comes in beside the
-// saved prop of the same id instead: CopyContents, the prop with its new name,
+// RestoreChoice is one document to bring in. With a CopyID, it comes in beside the
+// saved document of the same id instead: CopyContents, the document with its new name,
 // are written under CopyID, keeping the time the original was saved. They are
-// text, as a prop file is, since bytes inside a struct don't cross the bridge
+// text, as a document file is, since bytes inside a struct don't cross the bridge
 // the way bytes on their own do.
 type RestoreChoice struct {
 	ID           string `json:"id"`
@@ -119,23 +126,65 @@ type RestoreChoice struct {
 // backupStop is set by StopBackup and read between files.
 var backupStop atomic.Bool
 
+var errNoPath = errors.New("no file path given")
+
+// checkPath rejects a path that can't mean anything, which is always a caller bug.
+func checkPath(path string) error {
+	if strings.TrimSpace(path) == "" {
+		return errNoPath
+	}
+
+	return nil
+}
+
+// Service is the backup service: backups to a file, to a folder and to the cloud.
+type Service struct {
+	shell   backend.Shell
+	library *documents.Library
+
+	// secrets keeps the cloud backup keys: the system's keychain in the running
+	// app, memory in tests.
+	secrets secrets.Store
+
+	// cloudStoreFor makes the storage client. It is nil in the running app,
+	// which then uses the S3 client; tests set it to a fake.
+	cloudStoreFor func(target CloudTarget, keys cloudKeys) (objectStore, error)
+}
+
+// New makes the backup service for library, keeping cloud keys in store.
+func New(shell backend.Shell, library *documents.Library, store secrets.Store) *Service {
+	return &Service{shell: shell, library: library, secrets: store}
+}
+
+// HeldPicturePrefix is where pictures of a backup being restored are served, so
+// the restore screen can show them.
+const HeldPicturePrefix = documents.PicturePathPrefix + holdingFolderName + "/"
+
+// HeldPictureHandler serves those pictures. It is a function rather than a
+// method so Wails doesn't offer it to the interface.
+func HeldPictureHandler(s *Service) http.Handler {
+	return http.StripPrefix(HeldPicturePrefix, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		documents.ServePicture(writer, request, request.URL.Path, s.holdingDir)
+	}))
+}
+
 // StopBackup asks a backup or restore under way to stop after the file it is on.
-func (a *App) StopBackup() {
+func (s *Service) StopBackup() {
 	backupStop.Store(true)
 }
 
-// BackUpToFile writes every file the app owns in the saved props folder, and
-// the palettes the interface hands over, to a zip at target. The zip is written
+// BackUpToFile writes every file the app owns in the library, and
+// the extra text the interface hands over, to a zip at target. The zip is written
 // beside target under a temporary name and renamed at the end, so a backup that
 // fails or is stopped leaves nothing behind.
-func (a *App) BackUpToFile(target string, palettes []byte, appVersion string) (BackupSummary, error) {
+func (s *Service) BackUpToFile(target string, extras []byte, appVersion string) (BackupSummary, error) {
 	if err := checkPath(target); err != nil {
 		return BackupSummary{}, err
 	}
 
 	backupStop.Store(false)
 
-	dir, err := a.libraryDir()
+	dir, err := s.library.LibraryFolder()
 	if err != nil {
 		return BackupSummary{}, err
 	}
@@ -175,15 +224,15 @@ func (a *App) BackUpToFile(target string, palettes []byte, appVersion string) (B
 		manifest.Files = append(manifest.Files, entry)
 		summary.Bytes += entry.Size
 
-		if path.Dir(entry.Path) == "." && strings.HasSuffix(entry.Path, treeJSONSuffix) {
-			summary.Props++
+		if path.Dir(entry.Path) == "." && strings.HasSuffix(entry.Path, documents.JSONSuffix) {
+			summary.Documents++
 		}
 
-		a.emitBackupProgress(index+1, len(files))
+		s.emitBackupProgress(index+1, len(files))
 	}
 
-	if len(palettes) > 0 {
-		if err := addBackupBytes(archive, backupPalettesName, palettes, time.Now()); err != nil {
+	if len(extras) > 0 {
+		if err := addBackupBytes(archive, backupExtrasName, extras, time.Now()); err != nil {
 			return discard(err)
 		}
 	}
@@ -216,7 +265,7 @@ func (a *App) BackUpToFile(target string, palettes []byte, appVersion string) (B
 
 // OpenBackupFile unpacks the backup at source into the holding folder and says
 // what's in it. Anything held from an earlier restore is cleared first.
-func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
+func (s *Service) OpenBackupFile(source string) (HeldBackup, error) {
 	if err := checkPath(source); err != nil {
 		return HeldBackup{}, err
 	}
@@ -234,7 +283,7 @@ func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
 		return HeldBackup{}, err
 	}
 
-	holding, err := a.freshHoldingDir()
+	holding, err := s.freshHoldingDir()
 	if err != nil {
 		return HeldBackup{}, err
 	}
@@ -246,24 +295,24 @@ func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
 		}
 	}
 
-	held := HeldBackup{App: manifest.App, MadeAt: manifest.MadeAt, Props: []HeldProp{}}
+	held := HeldBackup{App: manifest.App, MadeAt: manifest.MadeAt, Documents: []HeldDocument{}}
 
 	for index, entry := range archive.File {
 		if backupStop.Load() {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, errBackupStopped
 		}
 
 		switch {
 		case entry.Name == backupManifestName:
 			continue
-		case entry.Name == backupPalettesName:
+		case entry.Name == backupExtrasName:
 			contents, err := readBackupEntry(entry)
 			if err != nil {
 				return HeldBackup{}, err
 			}
 
-			held.Palettes = string(contents)
+			held.Extras = string(contents)
 
 			continue
 		case strings.HasSuffix(entry.Name, "/"):
@@ -272,13 +321,13 @@ func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
 
 		relative, err := backupEntryPath(entry.Name)
 		if err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
 		contents, err := readBackupEntry(entry)
 		if err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
@@ -293,14 +342,14 @@ func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
 		}
 
 		if err := writeFileKeepingTime(target, contents, at); err != nil {
-			a.ClearHolding()
+			s.ClearHolding()
 			return HeldBackup{}, err
 		}
 
-		a.emitBackupProgress(index+1, len(archive.File))
+		s.emitBackupProgress(index+1, len(archive.File))
 	}
 
-	held.Props, err = a.heldProps(holding)
+	held.Documents, err = s.heldDocuments(holding)
 	if err != nil {
 		return HeldBackup{}, err
 	}
@@ -308,35 +357,35 @@ func (a *App) OpenBackupFile(source string) (HeldBackup, error) {
 	return held, nil
 }
 
-// ReadHeldProp returns the bytes of a prop in the holding folder, so the
+// ReadHeldDocument returns the bytes of a document in the holding folder, so the
 // restore screen can say what each one is.
-func (a *App) ReadHeldProp(id string) ([]byte, error) {
-	if err := checkTreeID(id); err != nil {
+func (s *Service) ReadHeldDocument(id string) ([]byte, error) {
+	if err := fsutil.CheckID(id); err != nil {
 		return nil, err
 	}
 
-	holding, err := a.holdingDir()
+	holding, err := s.holdingDir()
 	if err != nil {
 		return nil, err
 	}
 
-	return os.ReadFile(filepath.Join(holding, id+treeJSONSuffix))
+	return os.ReadFile(filepath.Join(holding, id+documents.JSONSuffix))
 }
 
-// RestoreFromHolding brings the chosen props in from the holding folder, each
+// RestoreFromHolding brings the chosen documents in from the holding folder, each
 // keeping the time it was saved, then brings in anything else the backup held
-// in the app's own folders that isn't here yet. It never replaces a saved prop:
+// in the app's own folders that isn't here yet. It never replaces a saved document:
 // one that differs comes in under its CopyID or not at all. It returns how many
-// props came in.
-func (a *App) RestoreFromHolding(choices []RestoreChoice) (int, error) {
+// documents came in.
+func (s *Service) RestoreFromHolding(choices []RestoreChoice) (int, error) {
 	backupStop.Store(false)
 
-	holding, err := a.holdingDir()
+	holding, err := s.holdingDir()
 	if err != nil {
 		return 0, err
 	}
 
-	dir, err := a.libraryDir()
+	dir, err := s.library.LibraryFolder()
 	if err != nil {
 		return 0, err
 	}
@@ -348,7 +397,7 @@ func (a *App) RestoreFromHolding(choices []RestoreChoice) (int, error) {
 			return restored, errBackupStopped
 		}
 
-		came, err := a.restoreOne(holding, dir, choice)
+		came, err := s.restoreOne(holding, dir, choice)
 		if err != nil {
 			return restored, err
 		}
@@ -357,7 +406,7 @@ func (a *App) RestoreFromHolding(choices []RestoreChoice) (int, error) {
 			restored++
 		}
 
-		a.emitBackupProgress(index+1, len(choices))
+		s.emitBackupProgress(index+1, len(choices))
 	}
 
 	if err := restoreMissingFolders(holding, dir); err != nil {
@@ -370,18 +419,18 @@ func (a *App) RestoreFromHolding(choices []RestoreChoice) (int, error) {
 // ClearHolding removes the holding folder and everything in it. It is called
 // when a restore finishes or is cancelled, and at startup for anything a crash
 // left behind.
-func (a *App) ClearHolding() {
-	if holding, err := a.holdingDir(); err == nil {
+func (s *Service) ClearHolding() {
+	if holding, err := s.holdingDir(); err == nil {
 		_ = os.RemoveAll(holding)
 	}
 }
 
-func (a *App) restoreOne(holding string, dir string, choice RestoreChoice) (bool, error) {
-	if err := checkTreeID(choice.ID); err != nil {
+func (s *Service) restoreOne(holding string, dir string, choice RestoreChoice) (bool, error) {
+	if err := fsutil.CheckID(choice.ID); err != nil {
 		return false, err
 	}
 
-	from := filepath.Join(holding, choice.ID+treeJSONSuffix)
+	from := filepath.Join(holding, choice.ID+documents.JSONSuffix)
 
 	info, err := os.Stat(from)
 	if err != nil {
@@ -391,7 +440,7 @@ func (a *App) restoreOne(holding string, dir string, choice RestoreChoice) (bool
 	id, contents := choice.ID, []byte(nil)
 
 	if choice.CopyID != "" {
-		if err := checkTreeID(choice.CopyID); err != nil {
+		if err := fsutil.CheckID(choice.CopyID); err != nil {
 			return false, err
 		}
 
@@ -403,23 +452,23 @@ func (a *App) restoreOne(holding string, dir string, choice RestoreChoice) (bool
 		}
 	}
 
-	to := filepath.Join(dir, id+treeJSONSuffix)
+	to := filepath.Join(dir, id+documents.JSONSuffix)
 
 	if existing, err := os.ReadFile(to); err == nil {
 		if choice.CopyID == "" && sameBytes(existing, contents) {
 			return false, nil
 		}
 
-		return false, fmt.Errorf("%w: %q", errAlreadyThere, id)
+		return false, fmt.Errorf("%w: %q", documents.ErrAlreadyThere, id)
 	}
 
 	if err := writeFileKeepingTime(to, contents, info.ModTime()); err != nil {
 		return false, err
 	}
 
-	picture, err := os.ReadFile(filepath.Join(holding, choice.ID+treePNGSuffix))
+	picture, err := os.ReadFile(filepath.Join(holding, choice.ID+documents.PictureSuffix))
 	if err == nil {
-		if err := writeFileAtomic(filepath.Join(dir, id+treePNGSuffix), picture); err != nil {
+		if err := fsutil.WriteAtomic(filepath.Join(dir, id+documents.PictureSuffix), picture); err != nil {
 			return true, err
 		}
 	}
@@ -428,7 +477,7 @@ func (a *App) restoreOne(holding string, dir string, choice RestoreChoice) (bool
 }
 
 // restoreMissingFolders brings in files from the backup's folders, such as
-// looks, that aren't in the saved props folder yet. Files already there stay
+// a folder of the app's own, that aren't in the library yet. Files already there stay
 // as they are.
 func restoreMissingFolders(holding string, dir string) error {
 	return filepath.WalkDir(holding, func(current string, entry fs.DirEntry, err error) error {
@@ -464,15 +513,15 @@ func restoreMissingFolders(holding string, dir string) error {
 	})
 }
 
-// heldProps lists the props at the top of the holding folder, and how each
-// compares with the saved prop of the same id.
-func (a *App) heldProps(holding string) ([]HeldProp, error) {
+// heldDocuments lists the documents at the top of the holding folder, and how each
+// compares with the saved document of the same id.
+func (s *Service) heldDocuments(holding string) ([]HeldDocument, error) {
 	entries, err := os.ReadDir(holding)
 	if err != nil {
 		return nil, err
 	}
 
-	dir, err := a.libraryDir()
+	dir, err := s.library.LibraryFolder()
 	if err != nil {
 		return nil, err
 	}
@@ -482,11 +531,11 @@ func (a *App) heldProps(holding string) ([]HeldProp, error) {
 		names[entry.Name()] = true
 	}
 
-	props := []HeldProp{}
+	found := []HeldDocument{}
 
 	for _, entry := range entries {
-		id, isProp := strings.CutSuffix(entry.Name(), treeJSONSuffix)
-		if entry.IsDir() || !isProp {
+		id, isDocument := strings.CutSuffix(entry.Name(), documents.JSONSuffix)
+		if entry.IsDir() || !isDocument {
 			continue
 		}
 
@@ -495,16 +544,16 @@ func (a *App) heldProps(holding string) ([]HeldProp, error) {
 			return nil, err
 		}
 
-		props = append(props, HeldProp{
+		found = append(found, HeldDocument{
 			ID:         id,
 			SavedAt:    info.ModTime().UTC().Format(time.RFC3339),
 			Size:       info.Size(),
-			HasPicture: names[id+treePNGSuffix],
+			HasPicture: names[id+documents.PictureSuffix],
 			Status:     compareWithSaved(filepath.Join(holding, entry.Name()), filepath.Join(dir, entry.Name())),
 		})
 	}
 
-	slices.SortFunc(props, func(left, right HeldProp) int {
+	slices.SortFunc(found, func(left, right HeldDocument) int {
 		if order := strings.Compare(right.SavedAt, left.SavedAt); order != 0 {
 			return order
 		}
@@ -512,7 +561,7 @@ func (a *App) heldProps(holding string) ([]HeldProp, error) {
 		return strings.Compare(left.ID, right.ID)
 	})
 
-	return props, nil
+	return found, nil
 }
 
 func compareWithSaved(held string, saved string) string {
@@ -529,9 +578,9 @@ func compareWithSaved(held string, saved string) string {
 	return "different"
 }
 
-// backupFiles lists the files to back up, relative to the saved props folder,
+// backupFiles lists the files to back up, relative to the library,
 // with forward slashes. The bin stays out, and so does anything the app didn't
-// write: only prop files and pictures, never a temporary file mid-write.
+// write: only document files and pictures, never a temporary file mid-write.
 func backupFiles(dir string) ([]string, error) {
 	files := []string{}
 
@@ -546,7 +595,7 @@ func backupFiles(dir string) ([]string, error) {
 		}
 
 		if entry.IsDir() {
-			if relative == binFolderName {
+			if relative == documents.RemovedFolder {
 				return filepath.SkipDir
 			}
 
@@ -554,7 +603,7 @@ func backupFiles(dir string) ([]string, error) {
 		}
 
 		name := entry.Name()
-		if strings.HasPrefix(name, ".") || !(strings.HasSuffix(name, treeJSONSuffix) || strings.HasSuffix(name, treePNGSuffix)) {
+		if strings.HasPrefix(name, ".") || !(strings.HasSuffix(name, documents.JSONSuffix) || strings.HasSuffix(name, documents.PictureSuffix)) {
 			return nil
 		}
 
@@ -563,7 +612,7 @@ func backupFiles(dir string) ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot read the saved props folder %q: %w", dir, err)
+		return nil, fmt.Errorf("cannot read the library %q: %w", dir, err)
 	}
 
 	slices.Sort(files)
@@ -584,7 +633,7 @@ func addBackupFile(archive *zip.Writer, dir string, relative string) (backupFile
 		return backupFile{}, fmt.Errorf("cannot back up %q: %w", relative, err)
 	}
 
-	if err := addBackupBytes(archive, backupPropsFolder+relative, contents, info.ModTime()); err != nil {
+	if err := addBackupBytes(archive, backupDocumentsFolder+relative, contents, info.ModTime()); err != nil {
 		return backupFile{}, err
 	}
 
@@ -637,30 +686,30 @@ func readBackupManifest(archive *zip.Reader) (backupManifest, error) {
 	return backupManifest{}, errNotABackup
 }
 
-// backupEntryPath turns a name in the zip into a path inside the saved props
+// backupEntryPath turns a name in the zip into a path inside the saved documents
 // folder, refusing anything that could land outside it or that the app would
 // never have written: a climb up, an absolute path, a backslash, the bin, or a
-// file that isn't a prop or a picture.
+// file that isn't a document or a picture.
 func backupEntryPath(name string) (string, error) {
-	relative, inProps := strings.CutPrefix(name, backupPropsFolder)
+	relative, inDocuments := strings.CutPrefix(name, backupDocumentsFolder)
 	refuse := fmt.Errorf("%w: it holds %q, which the app never writes", errNotABackup, name)
 
-	if !inProps || strings.Contains(relative, `\`) || !filepath.IsLocal(filepath.FromSlash(relative)) || path.Clean(relative) != relative {
+	if !inDocuments || strings.Contains(relative, `\`) || !filepath.IsLocal(filepath.FromSlash(relative)) || path.Clean(relative) != relative {
 		return "", refuse
 	}
 
 	segments := strings.Split(relative, "/")
-	if segments[0] == binFolderName {
+	if segments[0] == documents.RemovedFolder {
 		return "", refuse
 	}
 
 	stem, ext := strings.TrimSuffix(segments[len(segments)-1], path.Ext(relative)), path.Ext(relative)
-	if (ext != treeJSONSuffix && ext != treePNGSuffix) || checkTreeID(stem) != nil {
+	if (ext != documents.JSONSuffix && ext != documents.PictureSuffix) || fsutil.CheckID(stem) != nil {
 		return "", refuse
 	}
 
 	for _, folder := range segments[:len(segments)-1] {
-		if checkTreeID(folder) != nil {
+		if fsutil.CheckID(folder) != nil {
 			return "", refuse
 		}
 	}
@@ -670,7 +719,7 @@ func backupEntryPath(name string) (string, error) {
 
 func readBackupEntry(entry *zip.File) ([]byte, error) {
 	if entry.UncompressedSize64 > largestBackupFile {
-		return nil, fmt.Errorf("%w: %q is far larger than any prop", errNotABackup, entry.Name)
+		return nil, fmt.Errorf("%w: %q is far larger than any document", errNotABackup, entry.Name)
 	}
 
 	reader, err := entry.Open()
@@ -686,16 +735,16 @@ func readBackupEntry(entry *zip.File) ([]byte, error) {
 	}
 
 	if len(contents) > largestBackupFile {
-		return nil, fmt.Errorf("%w: %q is far larger than any prop", errNotABackup, entry.Name)
+		return nil, fmt.Errorf("%w: %q is far larger than any document", errNotABackup, entry.Name)
 	}
 
 	return contents, nil
 }
 
 // writeFileKeepingTime writes contents to path and gives it the time at, so a
-// restored prop still says when it was last saved.
+// restored document still says when it was last saved.
 func writeFileKeepingTime(path string, contents []byte, at time.Time) error {
-	if err := writeFileAtomic(path, contents); err != nil {
+	if err := fsutil.WriteAtomic(path, contents); err != nil {
 		return err
 	}
 
@@ -706,19 +755,19 @@ func sameBytes(left []byte, right []byte) bool {
 	return sha256.Sum256(left) == sha256.Sum256(right)
 }
 
-// holdingDir is the holding folder, beside the settings rather than inside the
-// saved props folder, so nothing held can ever be listed as a saved prop.
-func (a *App) holdingDir() (string, error) {
-	settings, err := a.settingsPath()
+// holdingDir is the holding folder, in the data folder rather than inside the
+// library, so nothing held can ever be listed as a saved document.
+func (s *Service) holdingDir() (string, error) {
+	data, err := s.shell.DataFolder()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(filepath.Dir(settings), holdingFolderName), nil
+	return filepath.Join(data, holdingFolderName), nil
 }
 
-func (a *App) freshHoldingDir() (string, error) {
-	holding, err := a.holdingDir()
+func (s *Service) freshHoldingDir() (string, error) {
+	holding, err := s.holdingDir()
 	if err != nil {
 		return "", err
 	}
@@ -734,6 +783,6 @@ func (a *App) freshHoldingDir() (string, error) {
 	return holding, nil
 }
 
-func (a *App) emitBackupProgress(done int, total int) {
-	a.emit(BackupProgressEvent, done, total)
+func (s *Service) emitBackupProgress(done int, total int) {
+	s.shell.Emit(BackupProgressEvent, done, total)
 }
