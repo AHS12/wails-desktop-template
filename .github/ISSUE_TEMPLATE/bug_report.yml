@@ -1,0 +1,77 @@
+name: Bug report
+description: Something is broken or looks wrong.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting this. Please check that it isn't already in the open issues.
+  - type: dropdown
+    id: action
+    attributes:
+      label: What were you doing?
+      options:
+        - Installing or opening the app
+        - Browsing the home page or my saved documents
+        - Editing a document
+        - Saving or opening a document
+        - Exporting
+        - Backing up or restoring
+        - Changing settings or the interface scale
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we make it happen?
+      placeholder: |
+        1. Open a saved document
+        2. Choose Export
+        3. Pick a folder
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - Only once so far
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Choose About in the Help menu.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Windows 11
+        - Windows 10
+        - Mac with Apple silicon
+        - Mac with Intel
+        - Built from source on another system
+    validations:
+      required: true
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Pictures and files
+      description: Drag in screenshots, a video or a file. Check them first for anything private, such as your name in a folder path.
+    validations:
+      required: false

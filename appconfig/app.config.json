@@ -1,0 +1,10 @@
+{
+  "name": "wails-desktop-template",
+  "id": "wails-desktop-template",
+  "bundleId": "com.ahs12.wails-desktop-template",
+  "company": "AHS12",
+  "description": "A starter for desktop apps that feel like desktop apps.",
+  "copyright": "© 2026 AHS12",
+  "repository": "AHS12/wails-desktop-template",
+  "version": "0.1.0"
+}

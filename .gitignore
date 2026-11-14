@@ -1,0 +1,28 @@
+# Wails build output
+/bin
+build/bin
+build/dist
+build/darwin/icons.icns
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+*.syso
+.task
+/wails-desktop-template.exe
+frontend/package.json.md5
+
+# Dependencies
+node_modules
+
+# Frontend build output
+frontend/dist
+
+# Private design notes
+/specs
+
+# Personal Claude Code files. Project skills in .claude/skills are shared.
+.claude/launch.json
+.claude/settings.local.json
+.claude/worktrees
+.commandcode
+
+# Local knowledge graph from graphify
+/graphify-out
