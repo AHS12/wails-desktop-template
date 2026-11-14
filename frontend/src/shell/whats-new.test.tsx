@@ -5,9 +5,6 @@ import {parseChangelog, whatsNewDue} from '../core/changelog'
 import {APP_VERSION} from '../core/version'
 import {useSettingsStore} from '../store/settings-store'
 import {useUiStore} from '../store/ui-store'
-import {TOURS} from '../example/tours'
-import {Tour} from '../features/tour/Tour'
-import {useTourStore} from '../features/tour/tour-store'
 import {WhatsNewDialog} from './WhatsNewDialog'
 
 describe('reading the changelog', () => {
@@ -74,22 +71,5 @@ describe('the dialog', () => {
 
         act(() => useUiStore.getState().setWhatsNewOpen(true))
         expect(screen.getByText("What's new")).toBeTruthy()
-    })
-
-    it('waits for the tour on a first start, when both would open at once', async () => {
-        useUiStore.setState({holds: {}})
-        useSettingsStore.setState({loaded: true, homeTourSeen: false, tourSeen: false, lastSeenVersion: ''})
-        useTourStore.setState({tours: TOURS, tourOpen: false})
-        render(
-            <>
-                <Tour />
-                <WhatsNewDialog />
-            </>,
-        )
-
-        await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
-
-        expect(screen.getByRole('dialog', {name: TOURS.home.name})).toBeInTheDocument()
-        expect(screen.queryByText("What's new")).toBeNull()
     })
 })

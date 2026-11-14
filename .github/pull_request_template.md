@@ -18,7 +18,8 @@ Closes #
 
 - [ ] `make check` passes
 - [ ] I added or updated tests where a test can show the change
-- [ ] Words on screen follow the [terminology table](https://github.com/AHS12/easy-props/blob/dev/docs/terminology.md)
+- [ ] Words on screen follow [docs/terminology.md](../blob/dev/docs/terminology.md)
 - [ ] Layout changes look right at more than 100% interface scale
-- [ ] Props saved before this change still open, and any generator whose output changed has a higher `version`
+- [ ] Documents saved before this change still open, and a document type whose shape changed has a higher `version`
+- [ ] An optional feature is still removable as [docs/removing-features.md](../blob/dev/docs/removing-features.md) says
 - [ ] No downloaded art or copied code

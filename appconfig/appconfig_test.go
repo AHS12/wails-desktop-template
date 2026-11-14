@@ -80,17 +80,8 @@ func TestAConfigWithABadFieldIsRefused(t *testing.T) {
 	}
 }
 
-// Files that still describe the app this came from until phase 8 of PLAN.md rewrites them. PLAN.md
-// itself says where the template came from, so it keeps the name.
-var stillAboutTheOldApp = map[string]bool{
-	"PLAN.md":                                true,
-	"README.md":                              true,
-	"AGENTS.md":                              true,
-	"CONTRIBUTING.md":                        true,
-	".claude/skills/release/SKILL.md":        true,
-	".claude/skills/try-in-browser/SKILL.md": true,
-	".github/pull_request_template.md":       true,
-}
+// PLAN.md says where the template came from, so it keeps the name.
+var stillAboutTheOldApp = map[string]bool{"PLAN.md": true}
 
 func TestNothingStillUsesTheOldName(t *testing.T) {
 	output, err := exec.Command("git", "-C", root, "ls-files", "-z").Output()

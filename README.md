@@ -1,128 +1,107 @@
-# easy-props
+# wails-desktop-template
 
-[![Latest version](https://img.shields.io/github/v/release/AHS12/easy-props?label=version)](https://github.com/AHS12/easy-props/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/AHS12/easy-props/total)](https://github.com/AHS12/easy-props/releases)
+A starter for desktop apps that feel like desktop apps, built with
+[Wails 3](https://v3.wails.io), React and TypeScript.
 
-Make game-ready 3D props in minutes, with no 3D experience needed.
+![A note open in the example app, with the menu bar as the title bar and the status bar below](docs/images/editor.png)
 
-Pick a tree, palm, bush, flower, patch of grass, cactus or rock, shape it with plain
-sliders, and export it for your game engine, painted or low-poly, lit or toon-shaded.
-It's a focused desktop tool for props, not a replacement for Blender.
+It comes with the parts every app needs sooner or later, already working and tested. When
+a new app doesn't need one, deleting it takes minutes; adding it later would take weeks.
+The example app keeps notes, and is the part a new app replaces.
 
-![A red maple open in easy-props, standing in the Meadow demo scene in front of a cliff, with rocks, bushes and grass](docs/images/meadow.png)
+![Home, with the notes saved most recently and a way back to the open one](docs/images/home.png)
 
-**[Download for Windows or Mac](https://github.com/AHS12/easy-props/releases)** · [What's new](CHANGELOG.md)
+## What's in it
 
-## What it does
-
-- **Start from a preset:** over 100 of them, from broadleaf trees, palms, conifers and
-  fantasy trees to bushes, ferns, flowers, grass, cacti, boulders and cliffs.
-- **Cartoon and Comic looks:** see your prop under toon shading, with soft bands of light or
-  flat colours and bold ink lines, and export it to match, with ready-made Godot materials.
-- **Low-poly in one click:** switch any prop to big flat faces, each one colour. It's the
-  same prop, so your changes carry over.
-- **Find the one you want:** **Show me more** puts nine versions of your prop side by
-  side. Click one to use it, or tick several and export them all.
-- **Make it yours:** drag a slider or type a value, and the prop updates live. Click a
-  branch or a leaf clump to change just that part, move it, or turn a branch around its
-  base, and undo anything.
-- **See it in a real place:** stand your prop in the Meadow or Grove demo scene, with a
-  person beside it for scale, to judge it before it goes in your game.
-- **See it move:** turn on **Wind** to watch your prop sway in the view, as the engine
-  kits will move it, from a calm day to a storm.
-- **Export for games:** each prop comes as GLB files with detail levels (LOD) and simple
-  collision shapes, which you can see in the view first, checked against a face budget.
-  Over budget? **Make it fit** lowers the controls that cost the most, in one step you can
-  undo.
-- **Wind built in:** trees and plants carry wind data in their second UV set, slow sway
-  and fast flutter, so they can move in your engine at almost no cost.
-- **Engine kits:** **Save kit…** in Export writes what your engine needs for that wind:
-  ready-made shaders for Godot, and step-by-step material instructions for Unreal.
-- **Export many at once:** batch-export presets, saved props and random variations, with
-  all of Export's choices, into a folder of their own.
-- **Your props, kept safe:** every saved prop on a page of its own, with a bin for anything
-  removed. Back them up to a file, to a folder once a day, or to your own S3-compatible cloud
-  storage (Cloudflare R2, Backblaze B2, Amazon S3, MinIO and others) after every change, and
-  bring them back on any computer.
-
-![A red maple in the Meadow demo, side by side in the Cartoon look, with soft bands of light, and the Comic look, with flat colours and ink lines](docs/images/looks.png)
-
-![A red maple side by side, in the Normal style with painted leaves and in the Low-poly style with flat faces](docs/images/low-poly.png)
-
-![A red maple swaying in the view with Wind switched on, from the Wind panel at the top](docs/images/wind.gif)
-
-![The editor, with presets on the left, a red maple in the middle and its controls on the right](docs/images/editor.png)
-
-![The home page, with recent props, a tab for each kind of prop, your own presets, and the presets to start from](docs/images/home.png)
-
-## Using props in your engine
-
-![The Export dialog set up for Godot with the Cartoon look, listing the files for a red maple, its Cartoon materials and their face counts](docs/images/export.png)
-
-| Target | How |
+| | |
 |---|---|
-| Unreal | Choose **Engine: Unreal** in Export and save the kit, then follow the [Unreal guide](docs/unreal-trees.md) |
-| Godot | Choose **Engine: Godot** in Export and save the kit, then follow the [Godot guide](docs/godot-trees.md) |
-| Blender and other tools | Choose **Plain GLB** in Export |
+| **Documents** | Save to a library or to any file, open, rename, copy, and **Recently removed**, which keeps what's removed for 30 days. A versioned file format that keeps keys it doesn't know |
+| **Never lose work** | Undo and redo, an autosaved draft that comes back after a crash, and a question before closing with anything unsaved |
+| **Library page** | Search, sort, groups by date, ticking several at once, keyboard moves, and pictures served from disk |
+| **Backup** *(optional)* | To a .zip anywhere, to a folder by itself once a day, and to cloud storage the person already has (S3, R2, B2, Wasabi and others), with keys kept in the system's keychain. Restoring shows what's in a backup first and never replaces anything |
+| **Export** *(optional)* | One document or many, in formats the app names, with progress and a question before replacing files |
+| **Updates** | Checks GitHub releases weekly, downloads with a checksum, and installs on close. Windows through the installer, a Mac through the Wails updater |
+| **A real window** | Frameless on Windows with its own buttons, an inset title bar on a Mac, remembered size and place, one copy at a time, and closing or minimising to the tray |
+| **Settings** | A settings window with search, built from a list of settings; rebindable shortcuts; light and dark themes; interface scale |
+| **Getting around** | A command palette for every command and setting, menus in the title bar, a status bar, What's new after an update |
+| **Report a problem** *(optional)* | GitHub's issue forms asked in the app, with the version and system filled in |
+| **Tour** *(optional)* | A short walk around each page, once by itself and any time from Help |
 
-## Install
+[Removing a feature](docs/removing-features.md) lists the steps for each optional one.
 
-Download the Windows installer or Mac DMG from
-[Releases](https://github.com/AHS12/easy-props/releases).
+## Start a new app
 
-The builds aren't signed yet, so the first launch shows a warning:
+1. Click **Use this template** on GitHub, and clone your new repository.
+2. Install what it needs (below), then rename it:
 
-- **Windows:** choose **More info > Run anyway**.
-- **Mac:** drag the app to Applications and try to open it, then choose
-  **System Settings > Privacy & Security > Open Anyway**.
+   ```bash
+   make install
+   make rename NAME="Recipe Box" ID=recipe-box BUNDLE=com.you.recipebox REPO=you/recipe-box
+   ```
+
+   `NAME` is what people see. `ID` names the binary, the data folder, the keychain entry and
+   release files. `BUNDLE` is how Windows and macOS know the app. `REPO` is where updates
+   and issues come from. All four live in `appconfig/app.config.json`, and `make check`
+   fails if any build file disagrees with it.
+3. Replace the example: `frontend/src/example` is the note type, its editor, its export
+   formats and its tour. `documentType` in `frontend/src/store/document-store.ts` says
+   which document type the app uses.
+4. Take out what you don't need, with [Removing a feature](docs/removing-features.md).
+5. Replace the icon: `build/appicon.png` (1024×1024), `frontend/public/favicon.svg`, and
+   `backend/tray-mac.png` for the Mac's menu bar. `wails3 task common:generate:icons` makes the
+   Windows `.ico` and Mac `.icns` from the PNG.
 
 ## Build from source
 
 You need Go 1.26 or later, Node.js, pnpm, [golangci-lint](https://golangci-lint.run/) and the
-Wails 3 CLI, at the version in `go.mod`:
-`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0`. `wails3 doctor` should
-report success. On Windows, `choco install make` provides `make`, and it also needs Git
-for Windows in its default folder.
+Wails 3 CLI at the version in `go.mod`:
+`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0`. `wails3 doctor` should report
+success. On Windows, `choco install make` provides `make`, which also needs Git for
+Windows in its default folder.
 
 ```bash
-make install    # Install frontend packages and git hooks, first time only
-make dev        # Run the app with hot reload
+make install    # Frontend packages and git hooks, first time only
+make dev        # The app with hot reload
+make web        # Only the interface, in a browser
 make build      # Build the app into bin
-make test       # Run the Go and frontend tests
-make lint       # Run every lint, needs golangci-lint
-make check      # Run every lint, test and build check
-make release    # Build whichever installer this computer can make
+make check      # Every lint, test and build check
+make release    # The installer this computer can make
 ```
 
-`make installer` builds the Windows installer (needs NSIS), and `make dmg` builds the
-Mac disk image and the zip a Mac updates itself from (needs a Mac). Both go to `build/dist`. Run `make` to list every task.
-
-## Releasing
-
-Add the new version to [CHANGELOG.md](CHANGELOG.md), and set it in `build/config.yml` and in
-`APP_VERSION` in `frontend/src/core/export/export-preferences.ts`. Run
-`wails3 task common:update:build-assets` to copy it into the Windows and Mac build files,
-then push. There are two ways to
-release, and both build the installers on GitHub and attach them to the release:
-
-- **Automatic:** publish a GitHub Release tagged `vX.Y.Z`.
-- **Manual:** run the **Release Installers** workflow under Actions, and enter the tag
-  and platform. It creates the release from the chosen branch if it doesn't exist yet,
-  and otherwise rebuilds it and replaces its installers. This also gets you a DMG
-  without a Mac.
-
-The tag has to match the version, or the run stops before building anything.
+Run `make` to list every task. `make installer` builds the Windows installer (needs NSIS),
+and `make dmg` the Mac disk image and update zip (needs a Mac).
 
 ## How it's built
 
-Wails (Go) for the desktop shell, React and TypeScript for the interface, and Three.js
-for the 3D view. Go only handles files, native dialogs and app updates: geometry, editing and export
-all live in TypeScript under `frontend/src`.
+Go handles files, native dialogs, the window, the tray, backups, updates and secrets.
+Documents are bytes to Go: every decision about them is made in TypeScript.
 
-## Contributing
+```
+appconfig/              who the app is: name, id, bundle id, repository, version
+backend/                the core service: window, tray, close guard, dialogs, settings, draft, updates
+backend/documents/      the library, its pictures and Recently removed
+backend/backup/         backups to a file, a folder and the cloud      (optional)
+backend/export/         writing an export's files                      (optional)
+frontend/src/core/      pure code: the document file, undo, settings, commands' search
+frontend/src/platform/  the only code that calls Go
+frontend/src/shell/     the menu bar, palette, settings window, pages and the feature registry
+frontend/src/features/  backup, export, report and tour, each removable
+frontend/src/example/   the Notes example, which a new app replaces
+```
 
-Bug reports, ideas and pull requests are welcome. [Open an issue](https://github.com/AHS12/easy-props/issues/new/choose),
-or read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rules a change follows, and
+[AGENTS.md](AGENTS.md) the same for coding agents.
+
+## Releasing
+
+`make version V=0.2.0`, a line in `CHANGELOG.md`, and a GitHub release tagged `v0.2.0`.
+GitHub builds the Windows installer and the Mac DMG and zip. [Releasing](docs/releasing.md)
+has the steps.
+
+Windows and macOS only for now. The builds aren't signed, so the first launch warns: on
+Windows choose **More info > Run anyway**, and on a Mac open it from
+**System Settings > Privacy & Security**. [Releasing](docs/releasing.md#signing) covers
+signing.
 
 ## License
 

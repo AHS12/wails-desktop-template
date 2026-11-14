@@ -147,7 +147,7 @@ Section "uninstall"
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 
     # Only our own files, in case someone installed into a folder they use. Saved
-    # props and settings live in the user's config folder, and are kept.
+    # Saved documents and settings live in the user's config folder, and are kept.
     Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"

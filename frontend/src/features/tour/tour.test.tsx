@@ -4,6 +4,7 @@ import {useDocumentStore} from '../../store/document-store'
 import {useSettingsStore} from '../../store/settings-store'
 import {TOURS} from '../../example/tours'
 import {useUiStore} from '../../store/ui-store'
+import {WhatsNewDialog} from '../../shell/WhatsNewDialog'
 import {Tour} from './Tour'
 import {availableSteps, placeCard} from './tour-steps'
 import {useTourStore} from './tour-store'
@@ -206,5 +207,26 @@ describe('the tours', () => {
 
         fireEvent.keyDown(window, {key: 'Escape'})
         expect(screen.queryByRole('dialog')).toBeNull()
+    })
+})
+
+describe('the tour and What’s new on a first start', () => {
+    afterEach(cleanup)
+
+    it('waits for the tour on a first start, when both would open at once', async () => {
+        useUiStore.setState({holds: {}})
+        useSettingsStore.setState({loaded: true, homeTourSeen: false, tourSeen: false, lastSeenVersion: ''})
+        useTourStore.setState({tours: TOURS, tourOpen: false})
+        render(
+            <>
+                <Tour />
+                <WhatsNewDialog />
+            </>,
+        )
+
+        await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+
+        expect(screen.getByRole('dialog', {name: TOURS.home.name})).toBeInTheDocument()
+        expect(screen.queryByText("What's new")).toBeNull()
     })
 })
