@@ -1,7 +1,7 @@
 /**
  * The draft: one unsaved document, kept so a close cannot destroy work.
  *
- * It lives outside the gallery folder, so it never appears as a saved prop,
+ * It lives outside the library folder, so it never appears as a saved document,
  * and it exists only while there are unsaved changes — a successful save
  * clears it.
  */

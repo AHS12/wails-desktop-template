@@ -198,15 +198,6 @@ export const DEFAULT_VALUES = Object.fromEntries(
 /** The current settings file's shape. Bump when a change cannot be read as-is. */
 export const SETTINGS_VERSION = 1
 
-export interface PanelLayout {
-    readonly leftWidth: number
-    readonly rightWidth: number
-    readonly leftOpen: boolean
-    readonly rightOpen: boolean
-}
-
-export const DEFAULT_LAYOUT: PanelLayout = {leftWidth: 264, rightWidth: 320, leftOpen: true, rightOpen: true}
-
 export interface SettingsFile {
     readonly version: number
     readonly values: SettingValues
@@ -216,7 +207,6 @@ export interface SettingsFile {
     readonly recent: readonly string[]
     /** How often each palette entry was chosen, to rank between similar scores. */
     readonly usage: Readonly<Record<string, number>>
-    readonly layout: PanelLayout
     readonly tourSeen: boolean
     readonly homeTourSeen: boolean
     /** The version whose What's new was last closed. */
@@ -295,7 +285,6 @@ export const DEFAULT_SETTINGS: SettingsFile = {
     shortcuts: {},
     recent: [],
     usage: {},
-    layout: DEFAULT_LAYOUT,
     tourSeen: false,
     homeTourSeen: false,
     lastSeenVersion: '',
@@ -344,14 +333,6 @@ const fileSchema = z.object({
     shortcuts: z.record(z.string(), z.string()).catch({}),
     recent: z.array(z.string()).catch([]),
     usage: z.record(z.string(), z.number()).catch({}),
-    layout: z
-        .object({
-            leftWidth: z.number().min(180).max(480),
-            rightWidth: z.number().min(240).max(520),
-            leftOpen: z.boolean(),
-            rightOpen: z.boolean(),
-        })
-        .catch(DEFAULT_LAYOUT),
     tourSeen: z.boolean().catch(false),
     homeTourSeen: z.boolean().catch(false),
     lastSeenVersion: z.string().catch(''),

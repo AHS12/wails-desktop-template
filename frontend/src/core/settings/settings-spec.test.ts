@@ -16,14 +16,12 @@ describe('reading settings', () => {
             JSON.stringify({
                 version: 1,
                 values: {reduceMotion: true, scale: 900, theme: 'pink'},
-                layout: {leftWidth: 5},
             }),
         )
 
         expect(file.values.reduceMotion).toBe(true)
         expect(file.values.scale).toBe(130)
         expect(file.values.theme).toBe(DEFAULT_VALUES.theme)
-        expect(file.layout).toEqual(DEFAULT_SETTINGS.layout)
     })
 
     it('fills in settings added since the file was written', () => {

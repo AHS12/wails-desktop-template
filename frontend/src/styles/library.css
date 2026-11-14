@@ -1,0 +1,472 @@
+/* Home, the library page with its tiles, and Recently removed. */
+
+.home {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--surface-panel);
+}
+
+.home__inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: var(--space-9) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.home__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.home__title {
+    font: var(--text-h1);
+}
+
+.home__sub {
+    margin-top: var(--space-1);
+    color: var(--text-secondary);
+}
+
+.home__draft {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--selection);
+    border-radius: var(--radius-md);
+    background: var(--surface-selected);
+}
+
+.home__draft-title {
+    font: var(--text-title);
+}
+
+.home__draft-actions {
+    flex: none;
+    display: flex;
+    gap: var(--space-2);
+}
+
+.home__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: 30px;
+    margin-bottom: var(--space-2);
+}
+
+.home__section-title {
+    font: var(--text-h2);
+}
+
+/* Every kind of prop, side by side, so the whole range shows before any click. */
+/* On Home the kinds sit above the chips, as wide as they need and no wider. */
+.chip {
+    height: 26px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: var(--text-label);
+}
+
+.chip:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.chip[aria-pressed='true'] {
+    border-color: var(--accent-moss-text);
+    background: var(--surface-selected);
+    color: var(--text-primary);
+}
+
+.tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.document-tile {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    overflow: hidden;
+}
+
+.document-tile:hover {
+    border-color: var(--border-strong);
+}
+
+.document-tile[data-current='true'] {
+    border-color: var(--accent-moss-text);
+}
+
+.document-tile__open {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.document-tile__thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background: #2a2c2f;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.document-tile__thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.document-tile__name {
+    padding: 6px var(--space-2) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--text-label);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.document-tile__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2) 7px;
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+}
+
+.document-tile__badge {
+    color: var(--accent-moss-text);
+    font-weight: 600;
+}
+
+.document-tile__actions {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    display: none;
+    gap: 2px;
+}
+
+.document-tile:hover .document-tile__actions,
+.document-tile:focus-within .document-tile__actions {
+    display: flex;
+}
+
+.document-tile__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+}
+
+.document-tile__choices {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.document-tile__choices .button {
+    flex: 1;
+    padding: 0 4px;
+}
+
+/* Gives the tour one button to point at, without changing the toolbar's layout. */
+/* Your props: a grid to find one, and a panel beside it about the picked one. */
+.library-page__inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-6) var(--space-9);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.library-page__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.library-page__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.library-page__search {
+    width: 260px;
+}
+
+.library-page__sort {
+    width: 150px;
+    margin-left: auto;
+}
+
+.library-page__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+    gap: var(--space-5);
+}
+
+.library-page__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.library-page__grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.document-tile[data-picked='true'] {
+    border-color: var(--selection);
+    box-shadow: 0 0 0 1px var(--selection);
+}
+
+.library-page__details {
+    position: sticky;
+    top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+}
+
+.library-page__preview {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #2a2c2f;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.library-page__preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.library-page__name {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    font: var(--text-h2);
+    overflow-wrap: anywhere;
+}
+
+.library-page__rename {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.library-page__facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px var(--space-3);
+    margin: 0;
+    font: var(--text-label);
+}
+
+.library-page__facts dt {
+    color: var(--text-tertiary);
+}
+
+.library-page__facts dd {
+    margin: 0;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.library-page__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.library-page__main-actions,
+.library-page__more-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.library-page__main-actions .button {
+    flex: 1;
+}
+
+/* Narrow windows put the panel under the grid instead of squeezing both. */
+@media (max-width: 900px) {
+    .library-page__body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .library-page__details {
+        position: static;
+    }
+
+    .library-page__preview {
+        max-width: 240px;
+    }
+}
+
+/* A tick in the tile's corner: shown on hover, and on every tile once any is ticked. */
+.document-tile__tick {
+    position: absolute;
+    top: var(--space-1);
+    left: var(--space-1);
+    width: 20px;
+    height: 20px;
+    display: none;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+}
+
+.document-tile:hover .document-tile__tick,
+.library-page__list:has(.document-tile[data-ticked='true']) .document-tile__tick {
+    display: grid;
+}
+
+.document-tile[data-ticked='true'] {
+    border-color: var(--selection);
+    box-shadow: 0 0 0 1px var(--selection);
+}
+
+.document-tile[data-ticked='true'] .document-tile__tick {
+    border-color: var(--selection);
+    background: var(--selection);
+    color: var(--text-on-accent);
+}
+
+.library-page__bin-link {
+    align-self: flex-start;
+}
+
+.library-page__bin {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* Recently removed, as tiles on Your props and as rows in Settings. */
+.removed-documents {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.removed-documents__all {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.removed-documents__actions {
+    flex-wrap: wrap;
+}
+
+.removed-documents[data-layout='tiles'] .removed-documents__actions,
+.removed-documents[data-layout='tiles'] .removed-documents__question {
+    padding: var(--space-2);
+}
+
+.removed-documents__question {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.removed-documents__rows {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.removed-documents__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.removed-documents__thumb {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #2a2c2f;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.removed-documents__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.removed-documents__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.removed-documents__row .removed-documents__actions,
+.removed-documents__row .removed-documents__question {
+    flex: none;
+}
+
+.removed-documents__row .removed-documents__actions .button {
+    flex: none;
+}
+
+.home__empty {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+

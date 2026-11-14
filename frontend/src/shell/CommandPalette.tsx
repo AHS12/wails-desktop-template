@@ -257,8 +257,8 @@ export function CommandPalette() {
                     aria-expanded="true"
                     aria-controls="palette-list"
                     aria-activedescendant={results[active] ? `palette-${active}` : undefined}
-                    aria-label="Search commands, controls, presets and settings"
-                    placeholder={sub ? 'Choose one' : 'Search commands, controls, presets, settings…'}
+                    aria-label="Search commands, saved work and settings"
+                    placeholder={sub ? 'Choose one' : 'Search commands, saved work, settings…'}
                     value={query}
                     spellCheck={false}
                     onChange={(event) => setQuery(event.target.value)}

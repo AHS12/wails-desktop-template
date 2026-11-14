@@ -1,0 +1,201 @@
+/* The menu bar, which is also the window's title bar. */
+
+/* A panel gives up width before the view does, so a large scale still fits the window. */
+.menubar {
+    flex: none;
+    height: var(--menubar-height);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-left: var(--space-2);
+    background: var(--surface-page);
+    border-bottom: 1px solid var(--border-subtle);
+    --wails-draggable: drag;
+}
+
+/* Room for the Mac's window buttons. */
+.menubar[data-inset='true'] {
+    padding-left: 78px;
+}
+
+.menubar button,
+.menubar input,
+.menubar [role='button'] {
+    --wails-draggable: no-drag;
+}
+
+.menubar__drag {
+    flex: 1;
+    align-self: stretch;
+    min-width: var(--space-2);
+}
+
+.menubar__brand {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--accent-moss);
+    color: #fff;
+}
+
+.menubar__brand:hover {
+    background: var(--accent-moss-hover);
+}
+
+.menubar__app {
+    color: var(--text-tertiary);
+    font: var(--text-label);
+    white-space: nowrap;
+}
+
+.menus {
+    display: flex;
+}
+
+.menu-button {
+    height: 26px;
+    min-width: 0;
+    padding: 0 9px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font: var(--text-body);
+    transform: none !important;
+}
+
+.menu-button:hover,
+.menu-button[data-open='true'] {
+    background: var(--surface-active);
+    color: var(--text-primary);
+}
+
+.document-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 220px;
+    height: 26px;
+    margin-left: var(--space-1);
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    font: var(--text-title);
+    font-weight: 500;
+}
+
+.document-name:hover {
+    border-color: var(--border-strong);
+}
+
+.document-name__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Save, with the other ways to save under an arrow joined on to it. */
+.split-button {
+    display: inline-flex;
+}
+
+.split-button > .button:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.split-button__more.button {
+    width: 24px;
+    min-width: 0;
+    margin-left: -1px;
+    padding: 0;
+    justify-content: center;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.document-name__dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.document-name__dot[data-dirty='true'] {
+    background: var(--selection);
+}
+
+.document-name__input {
+    width: 180px;
+    height: 26px;
+    margin-left: var(--space-1);
+    padding: 0 8px;
+    border: 1px solid var(--accent-moss);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font: var(--text-title);
+    font-weight: 500;
+    outline: none;
+}
+
+.palette-button {
+    flex: 0 1 300px;
+    min-width: 150px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 6px 0 var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-panel);
+    color: var(--text-tertiary);
+    font: var(--text-label);
+}
+
+.palette-button span {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.palette-button:hover {
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+}
+
+.window-controls {
+    display: flex;
+    align-self: stretch;
+    margin-left: var(--space-1);
+}
+
+.window-control {
+    width: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 0 !important;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.window-control:hover {
+    background: var(--surface-active);
+    color: var(--text-primary);
+}
+
+.window-control--close:hover {
+    background: #c42b1c;
+    color: #fff;
+}

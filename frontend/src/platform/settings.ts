@@ -2,7 +2,7 @@
  * Where settings are kept: a file written by Go, so they survive a WebView reset.
  *
  * A copy goes in the browser's storage as well, which is the only place in a plain
- * browser, and lets the first paint use the right theme and layout before Go answers.
+ * browser, and lets the first paint use the right theme and scale before Go answers.
  */
 
 import {APP} from '../core/app'

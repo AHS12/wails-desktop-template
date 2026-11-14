@@ -5,6 +5,7 @@
  * The Go side is backend/backup, registered in main.go.
  */
 
+import './backup.css'
 import {ArchiveRestore, CloudDownload, CloudUpload} from 'lucide-react'
 import {BringBack} from './BringBack'
 import type {Feature} from '../../shell/feature'

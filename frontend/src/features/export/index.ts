@@ -3,6 +3,7 @@
  * names, into a folder. The Go side is backend/export, registered in main.go.
  */
 
+import './export.css'
 import {Download, FileDown} from 'lucide-react'
 import type {Feature} from '../../shell/feature'
 import {documentType, type Content} from '../../store/document-store'

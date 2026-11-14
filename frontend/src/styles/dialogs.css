@@ -1,0 +1,162 @@
+/* Dialogs, and what's new. */
+
+.dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(8, 9, 10, 0.5);
+}
+
+.dialog-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    pointer-events: none;
+}
+
+.dialog-backdrop[data-position='top'] .dialog-container {
+    align-items: flex-start;
+    padding-top: 11vh;
+}
+
+.dialog {
+    max-width: none;
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    overflow: auto;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface-panel);
+    box-shadow: var(--shadow-3);
+    color: var(--text-primary);
+    outline: none;
+    pointer-events: auto;
+}
+
+.dialog__title {
+    font: var(--text-h2);
+    margin: 0;
+}
+
+.dialog__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: 0;
+}
+
+.dialog__label {
+    font: var(--text-label);
+    color: var(--text-secondary);
+}
+
+.dialog__hint {
+    color: var(--text-secondary);
+    font: var(--text-label);
+    line-height: 1.5;
+    user-select: text;
+}
+
+.whats-new {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+    padding-right: var(--space-2);
+    user-select: text;
+}
+
+.whats-new__release {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.whats-new__version {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--text-primary);
+    font: var(--text-h2);
+}
+
+.whats-new__date {
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+}
+
+.whats-new__group {
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+    font: var(--text-title);
+}
+
+.whats-new__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding-left: var(--space-4);
+    color: var(--text-secondary);
+    font: var(--text-label);
+    line-height: 1.5;
+    list-style: disc;
+}
+
+.dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+/* Two buttons side by side in one settings row. */
+.setting__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* Pushes the buttons after it to the far end of a row of dialog actions. */
+.dialog__spacer {
+    flex: 1;
+}
+
+.field--area {
+    height: auto;
+    min-height: 72px;
+    padding: var(--space-2);
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.field[aria-invalid='true'] {
+    border-color: var(--danger);
+}
+
+.dialog__progress {
+    width: 100%;
+    height: 6px;
+    accent-color: var(--accent-moss);
+}
+
+/* Room for the longest list, so the panel keeps its height whatever it holds. */
+.checklist__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 22px;
+    font: var(--text-label);
+}
+
+.checklist__item input {
+    accent-color: var(--accent-moss);
+}

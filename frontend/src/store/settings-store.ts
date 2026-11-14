@@ -7,12 +7,10 @@
 
 import {create} from 'zustand'
 import {
-    DEFAULT_LAYOUT,
     DEFAULT_SETTINGS,
     DEFAULT_VALUES,
     parseSettings,
     SETTING_SPECS,
-    type PanelLayout,
     type SettingKey,
     type SettingPage,
     type SettingsFile,
@@ -34,8 +32,6 @@ export interface SettingsStore extends SettingsFile {
     load(): Promise<void>
     setValue(key: SettingKey, value: SettingValue): void
     resetPage(page: SettingPage): void
-    setLayout(patch: Partial<PanelLayout>): void
-    resetLayout(): void
     setShortcut(commandId: string, keys: string | null): void
     resetShortcuts(): void
     /** Remembers a palette or menu choice, for ordering what comes first. */
@@ -58,9 +54,9 @@ let writeTimer: number | undefined
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
     const fileOf = (): SettingsFile => {
-        const {version, values, shortcuts, recent, usage, layout, tourSeen, homeTourSeen, lastSeenVersion, lastDocumentId, libraryFolder, lastUpdateCheck, recentColours, myColours, documentsSort, folderBackup, cloudBackup} = get()
+        const {version, values, shortcuts, recent, usage, tourSeen, homeTourSeen, lastSeenVersion, lastDocumentId, libraryFolder, lastUpdateCheck, recentColours, myColours, documentsSort, folderBackup, cloudBackup} = get()
 
-        return {version, values, shortcuts, recent, usage, layout, tourSeen, homeTourSeen, lastSeenVersion, lastDocumentId, libraryFolder, lastUpdateCheck, recentColours, myColours, documentsSort, folderBackup, cloudBackup}
+        return {version, values, shortcuts, recent, usage, tourSeen, homeTourSeen, lastSeenVersion, lastDocumentId, libraryFolder, lastUpdateCheck, recentColours, myColours, documentsSort, folderBackup, cloudBackup}
     }
 
     const change = (patch: Partial<SettingsFile>) => {
@@ -107,8 +103,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
             change({values})
         },
 
-        setLayout: (patch) => change({layout: {...get().layout, ...patch}}),
-        resetLayout: () => change({layout: DEFAULT_LAYOUT}),
 
         setShortcut: (commandId, keys) => {
             const shortcuts = {...get().shortcuts}

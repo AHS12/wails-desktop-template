@@ -1,0 +1,142 @@
+/* The command palette. */
+
+/* Make pieces from this tree: one row a piece, what it is under its name. */
+.dialog.palette {
+    height: auto;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    max-height: 66vh;
+}
+
+.palette__search {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 42px;
+    padding: 0 var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.palette__search-icon {
+    flex: none;
+    color: var(--text-tertiary);
+}
+
+.palette__back {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+    padding: 0 7px 0 3px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-active);
+    color: var(--text-primary);
+    font: var(--text-label);
+}
+
+.palette__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: var(--text-primary);
+    font: 400 14px var(--font-sans);
+}
+
+.palette__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-1);
+}
+
+.palette__empty {
+    padding: var(--space-6);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.palette__heading {
+    padding: var(--space-2) var(--space-2) 3px;
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+    font-weight: 600;
+}
+
+.palette__row {
+    width: 100%;
+    min-height: var(--row-height);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 3px var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    font: var(--text-body);
+    text-align: left;
+}
+
+.palette__row[data-active='true'] {
+    background: var(--surface-active);
+}
+
+.palette__row[data-unavailable] .palette__label {
+    color: var(--text-tertiary);
+}
+
+.palette__icon {
+    flex: none;
+    width: 16px;
+    display: grid;
+    place-items: center;
+    color: var(--text-secondary);
+}
+
+.palette__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: auto;
+}
+
+.palette__note,
+.palette__reason {
+    flex: none;
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+}
+
+.palette__more {
+    flex: none;
+    color: var(--text-tertiary);
+}
+
+.palette__foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: 28px;
+    padding: 0 var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+}
+
+.palette__prefixes {
+    margin-left: auto;
+}
+
+.palette__notice {
+    color: var(--warning);
+}

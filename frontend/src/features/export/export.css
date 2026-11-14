@@ -1,0 +1,90 @@
+/* Export: formats to pick, a folder, and a list of documents for Export many. */
+
+/* Export: formats to pick, a folder, and a list of documents for Export many. */
+.export__formats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.export__formats legend {
+    margin-bottom: var(--space-2);
+}
+
+.export__format {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    color: var(--text-primary);
+    font: var(--text-body);
+    cursor: pointer;
+}
+
+.export__format input {
+    margin-top: 3px;
+    flex: none;
+}
+
+.export__format > span {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.export__extension {
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+}
+
+.export__help {
+    margin: 0;
+}
+
+.export__folder {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.export__path {
+    overflow: hidden;
+    color: var(--text-secondary);
+    font: var(--text-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.export__list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.export__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 220px;
+    margin: 0;
+    padding: var(--space-2);
+    overflow-y: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    list-style: none;
+}
+
+.export__progress,
+.export__summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.export__failed {
+    color: var(--danger);
+}

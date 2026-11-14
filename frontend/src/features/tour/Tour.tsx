@@ -32,7 +32,7 @@ function TourRun({tours, page, onDone}: {tours: Tours; page: TourPage; onDone():
     const [cardHeight, setCardHeight] = useState(0)
     const card = useRef<HTMLDivElement>(null)
     const primary = useRef<HTMLButtonElement>(null)
-    // Worked out for the whole tour at each step: what has appeared since, like saved props, can still be shown.
+    // Worked out for the whole tour at each step: what has appeared since, like saved documents, can still be shown.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const steps = useMemo(() => availableSteps(tours[page].steps, (target) => targetElement(target) !== null), [tours, page, index])
     const step = steps[Math.min(index, steps.length - 1)]

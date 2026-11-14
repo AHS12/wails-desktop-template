@@ -6,6 +6,7 @@
  */
 
 import {useEffect, useRef} from 'react'
+import './note-editor.css'
 import {useDocumentStore} from '../store/document-store'
 import type {Note} from './note'
 

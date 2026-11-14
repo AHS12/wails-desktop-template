@@ -34,15 +34,15 @@ function HeldTile({held, ticked, onToggle}: {held: HeldDocumentView; ticked: boo
     const name = displayName(held)
 
     return (
-        <li className="prop-tile" data-ticked={ticked}>
-            <button type="button" className="prop-tile__open" role="checkbox" aria-checked={ticked} aria-label={name} onClick={onToggle}>
-                <span className="prop-tile__thumb">
+        <li className="document-tile" data-ticked={ticked}>
+            <button type="button" className="document-tile__open" role="checkbox" aria-checked={ticked} aria-label={name} onClick={onToggle}>
+                <span className="document-tile__thumb">
                     {held.picture ? <img src={held.picture} alt="" draggable={false} loading="lazy" /> : <Icon size={30} aria-hidden="true" />}
                 </span>
-                <span className="prop-tile__name">{name}</span>
-                <span className="prop-tile__meta">Saved {savedLabel(held.savedAt)}</span>
+                <span className="document-tile__name">{name}</span>
+                <span className="document-tile__meta">Saved {savedLabel(held.savedAt)}</span>
             </button>
-            <span className="prop-tile__tick restore__tick" aria-hidden="true">
+            <span className="document-tile__tick restore__tick" aria-hidden="true">
                 {ticked ? <Check size={12} /> : null}
             </span>
         </li>

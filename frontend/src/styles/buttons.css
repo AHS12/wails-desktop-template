@@ -1,0 +1,116 @@
+/* Buttons, text buttons, icon buttons and keys. */
+
+.button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--control-height);
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: var(--text-label);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+
+.button:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.button:disabled {
+    opacity: 0.5;
+}
+
+.button--primary {
+    border-color: transparent;
+    background: var(--accent-moss);
+    color: #fff;
+}
+
+.button--primary:hover:not(:disabled) {
+    background: var(--accent-moss-hover);
+}
+
+.button--danger {
+    border-color: transparent;
+    background: var(--danger);
+    color: #fff;
+}
+
+.button--danger:hover:not(:disabled) {
+    background: var(--danger-hover);
+}
+
+.menubar .button {
+    margin-right: 2px;
+}
+
+.menubar .button--primary {
+    margin-right: var(--space-2);
+}
+
+.window-controls ~ * {
+    margin: 0;
+}
+
+.text-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font: var(--text-label);
+    white-space: nowrap;
+}
+
+.text-button:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.icon-button {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.icon-button:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.icon-button--overlay {
+    background: var(--overlay-bg);
+    color: var(--overlay-text);
+}
+
+.icon-button--overlay:hover {
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+}
+
+.keys {
+    flex: none;
+    padding: 1px 5px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xs);
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+    font: 400 10.5px/1.4 var(--font-sans);
+    white-space: nowrap;
+}

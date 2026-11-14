@@ -1,0 +1,24 @@
+/* The frame every page sits in. */
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.editor-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* A backup needs the person: beside the File menu, Settings and a feature's settings page. */
+.attention-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 5px;
+    border-radius: 50%;
+    background: var(--danger);
+    vertical-align: middle;
+}

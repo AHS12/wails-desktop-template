@@ -18,9 +18,9 @@ type Forgetting = string | 'all' | null
 
 function ForgetQuestion({label, onKeep, onForget}: {label: string; onKeep(): void; onForget(): void}) {
     return (
-        <div className="removed-props__question" role="group" aria-label={label}>
+        <div className="removed-documents__question" role="group" aria-label={label}>
             <p className="dialog__hint">{label} This can't be undone.</p>
-            <div className="prop-tile__choices">
+            <div className="document-tile__choices">
                 <button type="button" className="button" autoFocus onClick={onKeep}>
                     Keep it
                 </button>
@@ -47,7 +47,7 @@ function Actions({document, forgetting, setForgetting}: {document: RemovedDocume
             }}
         />
     ) : (
-        <div className="prop-tile__choices removed-props__actions">
+        <div className="document-tile__choices removed-documents__actions">
             <button type="button" className="button" aria-label={`Put back ${name}`} onClick={() => void putBack([document.id])}>
                 <RotateCcw size={13} aria-hidden="true" />
                 Put back
@@ -71,7 +71,7 @@ export function RemovedDocuments({layout}: {layout: 'tiles' | 'rows'}) {
     }, [refreshRemoved])
 
     return (
-        <div className="removed-props" data-layout={layout}>
+        <div className="removed-documents" data-layout={layout}>
             <p className="dialog__hint">Removed {documentType.noun}s wait here for 30 days, then they're gone for good.</p>
 
             {removed.length === 0 ? (
@@ -89,7 +89,7 @@ export function RemovedDocuments({layout}: {layout: 'tiles' | 'rows'}) {
                                 }}
                             />
                         ) : (
-                            <div className="removed-props__all">
+                            <div className="removed-documents__all">
                                 <button type="button" className="button" onClick={() => void putBack(removed.map((document) => document.id))}>
                                     <RotateCcw size={13} aria-hidden="true" />
                                     Put all back
@@ -103,26 +103,26 @@ export function RemovedDocuments({layout}: {layout: 'tiles' | 'rows'}) {
                     ) : null}
 
                     {layout === 'tiles' ? (
-                        <ul className="tile-grid props-page__grid">
+                        <ul className="tile-grid library-page__grid">
                             {removed.map((document) => (
-                                <li key={document.id} className="prop-tile">
-                                    <div className="prop-tile__thumb">
+                                <li key={document.id} className="document-tile">
+                                    <div className="document-tile__thumb">
                                         <DocumentPicture document={document} />
                                     </div>
-                                    <span className="prop-tile__name">{displayName(document)}</span>
-                                    <span className="prop-tile__meta">Removed {savedLabel(document.removedAt)}</span>
+                                    <span className="document-tile__name">{displayName(document)}</span>
+                                    <span className="document-tile__meta">Removed {savedLabel(document.removedAt)}</span>
                                     <Actions document={document} forgetting={forgetting} setForgetting={setForgetting} />
                                 </li>
                             ))}
                         </ul>
                     ) : (
-                        <ul className="removed-props__rows">
+                        <ul className="removed-documents__rows">
                             {removed.map((document) => (
-                                <li key={document.id} className="removed-props__row">
-                                    <span className="removed-props__thumb">
+                                <li key={document.id} className="removed-documents__row">
+                                    <span className="removed-documents__thumb">
                                         <DocumentPicture document={document} iconSize={18} />
                                     </span>
-                                    <span className="removed-props__text">
+                                    <span className="removed-documents__text">
                                         <span className="setting__label">{displayName(document)}</span>
                                         <span className="setting__help">Removed {savedLabel(document.removedAt)}</span>
                                     </span>

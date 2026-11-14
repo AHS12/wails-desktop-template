@@ -3,6 +3,7 @@
  * time from Help. The app says what each tour says.
  */
 
+import './tour.css'
 import {HelpCircle} from 'lucide-react'
 import type {Feature} from '../../shell/feature'
 import {ShowTourRow} from './ShowTourRow'

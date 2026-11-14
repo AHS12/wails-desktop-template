@@ -3,6 +3,7 @@
  * system filled in. Nothing is sent from the app; the browser opens the form.
  */
 
+import './report.css'
 import {MessageSquareWarning} from 'lucide-react'
 import type {Feature} from '../../shell/feature'
 import {ReportDialog} from './ReportDialog'

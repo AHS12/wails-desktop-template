@@ -96,19 +96,19 @@ function Details({document, editing, request}: {document: SavedDocument; editing
     const readable = document.kind !== null
 
     return (
-        <aside className="props-page__details" aria-label={`About ${name}`}>
-            <div className="props-page__preview">
+        <aside className="library-page__details" aria-label={`About ${name}`}>
+            <div className="library-page__preview">
                 <DocumentPicture document={document} iconSize={48} />
             </div>
 
             {renaming ? (
-                <div className="props-page__rename">
-                    <label className="dialog__label" htmlFor="props-rename">
+                <div className="library-page__rename">
+                    <label className="dialog__label" htmlFor="library-rename">
                         New name
                     </label>
                     <input
                         className="field"
-                        id="props-rename"
+                        id="library-rename"
                         value={draft}
                         maxLength={60}
                         autoFocus
@@ -125,7 +125,7 @@ function Details({document, editing, request}: {document: SavedDocument; editing
                             }
                         }}
                     />
-                    <div className="prop-tile__choices">
+                    <div className="document-tile__choices">
                         <button type="button" className="button" onClick={() => setRenaming(false)}>
                             Cancel
                         </button>
@@ -135,13 +135,13 @@ function Details({document, editing, request}: {document: SavedDocument; editing
                     </div>
                 </div>
             ) : (
-                <h2 className="props-page__name">
+                <h2 className="library-page__name">
                     {name}
-                    {editing ? <span className="prop-tile__badge">Editing</span> : null}
+                    {editing ? <span className="document-tile__badge">Editing</span> : null}
                 </h2>
             )}
 
-            <dl className="props-page__facts">
+            <dl className="library-page__facts">
                 {made ? (
                     <>
                         <dt>Made</dt>
@@ -159,14 +159,14 @@ function Details({document, editing, request}: {document: SavedDocument; editing
                 <p className="dialog__hint">This file can't be read. It may be damaged, or from a newer {APP.name}.</p>
             )}
 
-            <div className="props-page__actions">
-                <div className="props-page__main-actions">
+            <div className="library-page__actions">
+                <div className="library-page__main-actions">
                     <button type="button" className="button button--primary" disabled={!readable} onClick={() => void open(document.id)}>
                         Open
                     </button>
                     {readable ? <FeatureActions ids={[document.id]} /> : null}
                 </div>
-                <div className="props-page__more-actions">
+                <div className="library-page__more-actions">
                     <button type="button" className="button" disabled={!readable} onClick={() => void copy(document.id)}>
                         <Copy size={13} aria-hidden="true" />
                         Copy
@@ -202,11 +202,11 @@ function TickedDetails({ids, onClear}: {ids: readonly string[]; onClear(): void}
     const plural = `${ids.length} ${documentType.noun}s`
 
     return (
-        <aside className="props-page__details" aria-label={`${plural} ticked`}>
-            <h2 className="props-page__name">{plural}</h2>
+        <aside className="library-page__details" aria-label={`${plural} ticked`}>
+            <h2 className="library-page__name">{plural}</h2>
             <p className="dialog__hint">Ctrl-click to tick or untick one more, Shift-click for a run. Esc clears the ticks.</p>
-            <div className="props-page__actions">
-                <div className="props-page__main-actions">
+            <div className="library-page__actions">
+                <div className="library-page__main-actions">
                     <FeatureActions ids={ids} />
                     <button
                         type="button"
@@ -231,7 +231,7 @@ function TickedDetails({ids, onClear}: {ids: readonly string[]; onClear(): void}
 /** Recently removed, in place of the list, with a way back. */
 function Removed({onBack}: {onBack(): void}) {
     return (
-        <section className="props-page__bin" aria-label="Recently removed">
+        <section className="library-page__bin" aria-label="Recently removed">
             <div className="home__section-head">
                 <h2 className="home__section-title">Recently removed</h2>
                 <button type="button" className="button" onClick={onBack}>
@@ -349,7 +349,7 @@ export function DocumentsPage() {
         }
 
         const index = visible.findIndex((document) => document.id === picked.id)
-        const across = columnsOf(grid.current?.querySelector('.props-page__grid') ?? null)
+        const across = columnsOf(grid.current?.querySelector('.library-page__grid') ?? null)
         const moves: Record<string, number> = {ArrowLeft: -1, ArrowRight: 1, ArrowUp: -across, ArrowDown: across}
 
         if (event.key in moves) {
@@ -379,9 +379,9 @@ export function DocumentsPage() {
     }
 
     return (
-        <main className="home props-page">
-            <div className="props-page__inner">
-                <header className="props-page__head">
+        <main className="home library-page">
+            <div className="library-page__inner">
+                <header className="library-page__head">
                     <button type="button" className="icon-button" aria-label="Back to Home" title="Home" onClick={showHome}>
                         <ArrowLeft size={15} aria-hidden="true" />
                     </button>
@@ -392,8 +392,8 @@ export function DocumentsPage() {
                     <Removed onBack={() => setInRemoved(false)} />
                 ) : (
                     <>
-                        <div className="props-page__toolbar">
-                            <div className="filter props-page__search">
+                        <div className="library-page__toolbar">
+                            <div className="filter library-page__search">
                                 <Search size={13} aria-hidden="true" className="filter__icon" />
                                 <input
                                     ref={searchField}
@@ -416,13 +416,13 @@ export function DocumentsPage() {
                                 ) : null}
                             </div>
 
-                            <div className="props-page__sort">
+                            <div className="library-page__sort">
                                 <Select label={`Sort your ${plural}`} value={sort} options={SORTS} onChange={setSort} />
                             </div>
                         </div>
 
-                        <div className="props-page__body">
-                            <div className="props-page__list" ref={grid} onKeyDown={onGridKey}>
+                        <div className="library-page__body">
+                            <div className="library-page__list" ref={grid} onKeyDown={onGridKey}>
                                 {loading && documents.length === 0 ? (
                                     <p className="dialog__hint" role="status">
                                         Looking for your {plural}…
@@ -435,18 +435,18 @@ export function DocumentsPage() {
                                     groups.map(({group, documents: inGroup}) => (
                                         <section key={group ?? 'all'} aria-label={group ?? `Your ${plural}`}>
                                             {group ? <h2 className="settings__group">{group}</h2> : null}
-                                            <ul className="tile-grid props-page__grid">
+                                            <ul className="tile-grid library-page__grid">
                                                 {inGroup.map((document) => (
                                                     <li
                                                         key={document.id}
-                                                        className="prop-tile"
+                                                        className="document-tile"
                                                         data-current={document.id === currentId}
                                                         data-picked={tickedIds.length === 0 && document.id === picked?.id}
                                                         data-ticked={ticked.has(document.id)}
                                                     >
                                                         <button
                                                             type="button"
-                                                            className="prop-tile__open"
+                                                            className="document-tile__open"
                                                             data-document-id={document.id}
                                                             title={document.name}
                                                             aria-pressed={document.id === picked?.id}
@@ -454,18 +454,18 @@ export function DocumentsPage() {
                                                             onClick={(event) => onTileClick(event, document.id)}
                                                             onDoubleClick={() => (document.kind !== null ? void open(document.id) : undefined)}
                                                         >
-                                                            <span className="prop-tile__thumb">
+                                                            <span className="document-tile__thumb">
                                                                 <DocumentPicture document={document} />
                                                             </span>
-                                                            <span className="prop-tile__name">{document.name}</span>
-                                                            <span className="prop-tile__meta">
+                                                            <span className="document-tile__name">{document.name}</span>
+                                                            <span className="document-tile__meta">
                                                                 {savedLabel(document.savedAt)}
-                                                                {document.id === currentId ? <span className="prop-tile__badge">Editing</span> : null}
+                                                                {document.id === currentId ? <span className="document-tile__badge">Editing</span> : null}
                                                             </span>
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            className="prop-tile__tick"
+                                                            className="document-tile__tick"
                                                             role="checkbox"
                                                             aria-checked={ticked.has(document.id)}
                                                             aria-label={`Tick ${document.name}`}
@@ -482,7 +482,7 @@ export function DocumentsPage() {
                                 )}
 
                                 {removed.length > 0 ? (
-                                    <button type="button" className="button props-page__bin-link" onClick={() => setInRemoved(true)}>
+                                    <button type="button" className="button library-page__bin-link" onClick={() => setInRemoved(true)}>
                                         <Trash2 size={13} aria-hidden="true" />
                                         Recently removed ({removed.length})
                                     </button>

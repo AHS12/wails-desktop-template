@@ -1,0 +1,193 @@
+/* The settings window, its pages and rows, and shortcuts. */
+
+.dialog.settings {
+    flex-direction: row;
+    gap: 0;
+    height: min(580px, calc(100vh - 32px));
+    padding: 0;
+    overflow: hidden;
+}
+
+.settings__nav {
+    flex: none;
+    width: 190px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: var(--space-2);
+    border-right: 1px solid var(--border-subtle);
+    background: var(--surface-page);
+}
+
+.settings__nav .filter {
+    margin-bottom: var(--space-2);
+}
+
+.settings__page {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font: var(--text-body);
+    text-align: left;
+}
+
+.settings__page:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.settings__page[aria-current='page'] {
+    background: var(--surface-active);
+    color: var(--text-primary);
+}
+
+.settings__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings__head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 44px;
+    padding: 0 var(--space-2) 0 var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings__title {
+    margin-right: auto;
+    font: var(--text-h2);
+}
+
+.settings__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+.settings__intro {
+    padding: var(--space-2) 0;
+    color: var(--text-secondary);
+    font: var(--text-label);
+    line-height: 1.5;
+}
+
+/* A group heading on Home with a button at its end, such as All my presets. */
+.settings__group {
+    padding: var(--space-3) 0 var(--space-1);
+    color: var(--text-secondary);
+    font: var(--text-label);
+    font-weight: 600;
+}
+
+.settings__page-foot {
+    padding-top: var(--space-4);
+}
+
+.setting {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.setting__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.setting__label {
+    font: var(--text-body);
+}
+
+.setting__help {
+    color: var(--text-secondary);
+    font: var(--text-caption);
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
+.setting__control {
+    flex: 0 0 240px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+.setting__value {
+    color: var(--text-secondary);
+    font: var(--text-label);
+}
+
+/* In a setting, the name sits on the left of the row already. */
+.setting__control .property {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 60px 18px;
+    padding: 0;
+}
+
+.setting__control .property > .property__label,
+.setting__control .property > .tooltip-trigger {
+    display: none;
+}
+
+.key-row {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.key-row__label {
+    margin-right: auto;
+    font: var(--text-label);
+}
+
+.key-row__conflict {
+    color: var(--warning);
+    font: var(--text-caption);
+}
+
+.key-row__keys {
+    padding: 1px 3px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+}
+
+.key-row__keys:hover {
+    background: var(--surface-active);
+}
+
+.key-row__none {
+    color: var(--text-tertiary);
+    font: var(--text-caption);
+}
+
+.key-capture {
+    width: 100px;
+    height: 22px;
+    padding: 0 6px;
+    border: 1px solid var(--accent-moss);
+    border-radius: var(--radius-xs);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font: var(--text-caption);
+    outline: none;
+    box-shadow: none !important;
+}

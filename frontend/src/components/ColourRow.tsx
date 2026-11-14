@@ -30,8 +30,8 @@ export function ColourRow({
     onChange(value: string): void
 }) {
     return (
-        <div className="prop prop--colour" data-control={controlKey}>
-            <span className="prop__label">{label}</span>
+        <div className="property property--colour" data-control={controlKey}>
+            <span className="property__label">{label}</span>
             <div
                 className="colours"
                 role="group"

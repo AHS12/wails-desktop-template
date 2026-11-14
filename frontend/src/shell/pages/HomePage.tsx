@@ -41,8 +41,8 @@ function DocumentCard({document, current, onOpen, onRemove, onRename}: CardProps
 
     if (renaming) {
         return (
-            <li className="prop-tile" data-current={current}>
-                <div className="prop-tile__panel">
+            <li className="document-tile" data-current={current}>
+                <div className="document-tile__panel">
                     <label className="dialog__label" htmlFor={`rename-${document.id}`}>
                         New name for {name}
                     </label>
@@ -64,7 +64,7 @@ function DocumentCard({document, current, onOpen, onRemove, onRename}: CardProps
                             }
                         }}
                     />
-                    <div className="prop-tile__choices">
+                    <div className="document-tile__choices">
                         <button type="button" className="button" onClick={() => setRenaming(false)}>
                             Cancel
                         </button>
@@ -78,18 +78,18 @@ function DocumentCard({document, current, onOpen, onRemove, onRename}: CardProps
     }
 
     return (
-        <li className="prop-tile" data-current={current}>
-            <button type="button" className="prop-tile__open" title={name} onClick={onOpen}>
-                <span className="prop-tile__thumb">
+        <li className="document-tile" data-current={current}>
+            <button type="button" className="document-tile__open" title={name} onClick={onOpen}>
+                <span className="document-tile__thumb">
                     <DocumentPicture document={document} />
                 </span>
-                <span className="prop-tile__name">{name}</span>
-                <span className="prop-tile__meta">
+                <span className="document-tile__name">{name}</span>
+                <span className="document-tile__meta">
                     {savedLabel(document.savedAt)}
-                    {current ? <span className="prop-tile__badge">Editing</span> : null}
+                    {current ? <span className="document-tile__badge">Editing</span> : null}
                 </span>
             </button>
-            <div className="prop-tile__actions">
+            <div className="document-tile__actions">
                 <button
                     type="button"
                     className="icon-button icon-button--overlay"

@@ -1,0 +1,43 @@
+/* Report a problem: one question under another, as on GitHub. */
+
+/* Report a problem: one question under another, as on GitHub. */
+.report__kinds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.report__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: min(52vh, 460px);
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+
+.report__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.report__optional {
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.report__shared summary {
+    color: var(--text-secondary);
+    font: var(--text-label);
+    cursor: pointer;
+}
+
+.report__shared[open] summary {
+    margin-bottom: var(--space-1);
+}
+
+.report__missing {
+    color: var(--danger);
+    font: var(--text-label);
+}

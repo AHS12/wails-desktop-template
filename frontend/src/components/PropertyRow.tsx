@@ -33,22 +33,22 @@ export function Row({
     children: ReactNode
 }) {
     return (
-        <div className="prop" data-control={controlKey}>
+        <div className="property" data-control={controlKey}>
             <Tooltip text={help} placement="left">
-                <span className="prop__label" tabIndex={help ? 0 : undefined}>
+                <span className="property__label" tabIndex={help ? 0 : undefined}>
                     {label}
                 </span>
             </Tooltip>
-            <div className="prop__control">{children}</div>
+            <div className="property__control">{children}</div>
         </div>
     )
 }
 
 export function ResetButton({label, visible, onReset}: {label: string; visible: boolean; onReset(): void}) {
     return (
-        <span className="prop__reset-slot">
+        <span className="property__reset-slot">
             {visible ? (
-                <button type="button" className="prop__reset" aria-label={`Reset ${label}`} title="Reset" onClick={onReset}>
+                <button type="button" className="property__reset" aria-label={`Reset ${label}`} title="Reset" onClick={onReset}>
                     <RotateCcw size={12} aria-hidden="true" />
                 </button>
             ) : null}
@@ -149,14 +149,14 @@ export function PropertyRow({
     }
 
     return (
-        <div className="prop" data-control={controlKey}>
+        <div className="property" data-control={controlKey}>
             <Tooltip text={help} placement="left">
-                <span className="prop__label" tabIndex={help ? 0 : undefined}>
+                <span className="property__label" tabIndex={help ? 0 : undefined}>
                     {label}
                 </span>
             </Tooltip>
             <Slider
-                className="prop__slider"
+                className="property__slider"
                 aria-label={label}
                 value={value}
                 minValue={min}
@@ -172,9 +172,9 @@ export function PropertyRow({
                     <Slider.Thumb />
                 </Slider.Track>
             </Slider>
-            <span className="prop__number">
+            <span className="property__number">
                 <input
-                    className="prop__input tabular"
+                    className="property__input tabular"
                     aria-label={`${label} value`}
                     value={draft ?? shown}
                     inputMode="decimal"
@@ -200,7 +200,7 @@ export function PropertyRow({
                         }
                     }}
                 />
-                {unit && unit !== 'count' ? <span className="prop__unit">{unit}</span> : null}
+                {unit && unit !== 'count' ? <span className="property__unit">{unit}</span> : null}
             </span>
             <ResetButton
                 label={label}
@@ -212,7 +212,7 @@ export function PropertyRow({
                 }}
             />
             {note ? (
-                <p className="prop__note" role="status">
+                <p className="property__note" role="status">
                     {note}
                 </p>
             ) : null}

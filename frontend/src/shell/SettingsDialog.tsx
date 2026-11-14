@@ -166,7 +166,7 @@ function KeyboardPage({needle}: {needle: string}) {
                                     {overrides[command.id] !== undefined ? (
                                         <button
                                             type="button"
-                                            className="prop__reset"
+                                            className="property__reset"
                                             aria-label={`Reset the shortcut for ${command.label}`}
                                             title="Reset"
                                             onClick={() => setShortcut(command.id, null)}

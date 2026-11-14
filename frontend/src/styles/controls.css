@@ -1,0 +1,215 @@
+/* Fields, filters, tooltips, switches, selects and menus. */
+
+.field {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: var(--control-height);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+    font: var(--text-body);
+}
+
+.field::placeholder,
+.filter__input::placeholder,
+.palette__input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.field:focus,
+.filter:focus-within {
+    outline: none;
+    border-color: var(--accent-moss);
+    box-shadow: none;
+}
+
+.filter {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+}
+
+.filter__icon {
+    flex: none;
+    color: var(--text-tertiary);
+}
+
+.filter__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: var(--text-primary);
+    font: var(--text-label);
+}
+
+.filter__clear {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+.filter__clear:hover {
+    background: var(--surface-active);
+    color: var(--text-primary);
+}
+
+.tooltip-trigger {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.tooltip {
+    max-width: 260px;
+    padding: 5px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: var(--text-label);
+    box-shadow: var(--shadow-2);
+}
+
+.switch-control {
+    flex: none;
+}
+
+.switch-control .switch__control {
+    width: 30px;
+    height: 16px;
+    border-radius: var(--radius-pill);
+}
+
+/* HeroUI works out the thumb's travel from its own size, so ours has to say. */
+.switch-control .switch__thumb {
+    --switch-thumb-offset: calc(100% - 12px - 4px);
+    width: 12px;
+    height: 12px;
+}
+
+.select-control {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.select-control__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-1);
+    min-height: 0;
+    height: var(--control-height);
+    width: 100%;
+    padding: 0 6px 0 var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    box-shadow: none;
+    color: var(--text-primary);
+    font: var(--text-label);
+}
+
+.select-control__trigger:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-sunken);
+}
+
+.select-control__value {
+    font: var(--text-label);
+    color: var(--text-primary);
+}
+
+/* The popovers of menus and selects. */
+.menu-popover {
+    min-width: 180px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-2);
+    color: var(--text-primary);
+}
+
+.menu-list {
+    padding: var(--space-1);
+    gap: 0;
+    outline: none;
+}
+
+.menu-item {
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 3px 8px 3px 6px;
+    border-radius: var(--radius-sm);
+    font: var(--text-body);
+    color: var(--text-primary);
+    outline: none;
+    transform: none !important;
+}
+
+.menu-item[data-focused='true'],
+.menu-item[data-focus-visible='true'],
+.menu-item[data-hovered='true'] {
+    background: var(--surface-active);
+}
+
+.menu-item[data-disabled='true'] {
+    color: var(--text-tertiary);
+    opacity: 0.75;
+}
+
+.menu-item__icon {
+    flex: none;
+    width: 16px;
+    display: grid;
+    place-items: center;
+    color: var(--text-secondary);
+}
+
+.menu-item__label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.menu-item__more {
+    color: var(--text-tertiary);
+}
+
+.menu-divider {
+    min-height: 0;
+    height: 1px;
+    margin: var(--space-1) 2px;
+    padding: 0;
+    background: var(--border-subtle);
+    pointer-events: none;
+    opacity: 1;
+}
+
+/* The icons drawn on a preset before its picture exists. */
+:root {
+    --thumb-bark: #8a6a4f;
+    --thumb-leaf: #6a9a56;
+    --thumb-leaf-dark: #47703a;
+}

@@ -28,7 +28,7 @@ export function ColourPicker({label, value, onChange}: {label: string; value: st
     const noteColour = useSettingsStore((state) => state.noteColour)
     const setMyColours = useSettingsStore((state) => state.setMyColours)
 
-    // Undo or another prop can change the colour under the picker. Reading the same
+    // Undo or another change can move the colour under the picker. Reading the same
     // colour back would lose the hue of a grey, so only a different one is read.
     useEffect(() => {
         setDraft((current) => (hexOf(current) === value.toLowerCase() ? current : parseColor(value).toFormat('hsb')))
@@ -176,13 +176,13 @@ export function ColourPicker({label, value, onChange}: {label: string; value: st
                             <ColorSlider.Thumb />
                         </ColorSlider.Track>
                     </ColorSlider>
-                    <div className="seed-panel__row">
-                        <label className="seed-panel__label" htmlFor={`${label}-code`}>
+                    <div className="colour-panel__row">
+                        <label className="colour-panel__label" htmlFor={`${label}-code`}>
                             Colour code
                         </label>
                         <input
                             id={`${label}-code`}
-                            className="seed-panel__field tabular"
+                            className="colour-panel__field tabular"
                             autoComplete="off"
                             spellCheck={false}
                             value={code}

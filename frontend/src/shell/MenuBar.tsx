@@ -87,7 +87,7 @@ function MenuEntries({items, onDone}: {items: readonly (string | null)[]; onDone
             disabledKeys={items.flatMap((id) => {
                 const command = id ? findCommand(id) : undefined
 
-                // The home page has no prop on screen to act on.
+                // The home page has no document on screen to act on.
                 const off = command && ((isHomePage(state.page) && !command.global) || command.unavailable?.(state))
 
                 return off ? [command.id] : []
@@ -226,7 +226,7 @@ function DocumentName() {
         return (
             <input
                 ref={input}
-                className="prop-name__input"
+                className="document-name__input"
                 aria-label="Name"
                 value={draft}
                 maxLength={60}
@@ -246,9 +246,9 @@ function DocumentName() {
     }
 
     return (
-        <button type="button" className="prop-name" title="Rename" onClick={() => setDraft(name)}>
-            <span className="prop-name__text">{name}</span>
-            <span className="prop-name__dot" data-dirty={dirty} role="img" aria-label={dirty ? 'Unsaved changes' : neverSaved ? 'Not saved yet' : 'Saved'} />
+        <button type="button" className="document-name" title="Rename" onClick={() => setDraft(name)}>
+            <span className="document-name__text">{name}</span>
+            <span className="document-name__dot" data-dirty={dirty} role="img" aria-label={dirty ? 'Unsaved changes' : neverSaved ? 'Not saved yet' : 'Saved'} />
         </button>
     )
 }

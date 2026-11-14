@@ -1,0 +1,26 @@
+/* The example app's editor: one column of text at a readable width. */
+
+/* The example app's editor: one column of text, readable width, filling the window's height. */
+.note-editor {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    background: var(--surface-page);
+}
+
+.note-editor__text {
+    flex: 1;
+    max-width: 760px;
+    padding: 28px 32px;
+    border: none;
+    outline: none;
+    resize: none;
+    background: var(--surface-panel);
+    color: var(--text-primary);
+    font: 400 15px/1.6 var(--font-sans);
+}
+
+.note-editor__text::placeholder {
+    color: var(--text-tertiary);
+}
