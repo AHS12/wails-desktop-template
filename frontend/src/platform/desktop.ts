@@ -24,13 +24,7 @@ interface WailsApp {
     ShowFolder(folder: string): Promise<void>
 }
 
-/** The export service: writing an export's files, and saying which are there already. */
-interface ExportBindings {
-    WriteFiles(folder: string, files: {name: string; contents: number[]}[]): Promise<void>
-    ExistingFiles(folder: string, names: string[]): Promise<string[]>
-}
 
-const exports = () => desktopApp<ExportBindings>('export')
 
 function desktop(): WailsApp | undefined {
     return desktopApp<WailsApp>()
@@ -41,7 +35,8 @@ export function isDesktop(): boolean {
     return desktop() !== undefined
 }
 
-async function writeWithBrowser(name: string, bytes: Uint8Array, type: string): Promise<void> {
+/** Saves bytes as a download, which is all a browser can do with a file. */
+export async function downloadInBrowser(name: string, bytes: Uint8Array, type: string): Promise<void> {
     const blob = new Blob([new Uint8Array(bytes)], {type})
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -75,7 +70,7 @@ export async function saveDocumentFile(text: string, path: string | null, sugges
     const app = desktop()
 
     if (!app) {
-        await writeWithBrowser(suggestedName, new TextEncoder().encode(text), 'application/json')
+        await downloadInBrowser(suggestedName, new TextEncoder().encode(text), 'application/json')
         return suggestedName
     }
 
@@ -95,7 +90,7 @@ export async function savePictureFile(bytes: Uint8Array, suggestedName: string):
     const app = desktop()
 
     if (!app) {
-        await writeWithBrowser(suggestedName, bytes, 'image/png')
+        await downloadInBrowser(suggestedName, bytes, 'image/png')
         return suggestedName
     }
 
@@ -114,66 +109,19 @@ export async function savePictureFile(bytes: Uint8Array, suggestedName: string):
  * Asks for a folder and returns it, or null if cancelled. A browser has no
  * folders to offer, so it answers with where downloads go.
  */
-export async function chooseFolder(start: string): Promise<string | null> {
+export async function chooseFolder(start: string, title = 'Choose a folder'): Promise<string | null> {
     const app = desktop()
 
     if (!app) {
         return BROWSER_DOWNLOADS
     }
 
-    return (await app.ChooseFolder('Export to folder', start)) || null
-}
-
-/** A folder inside another, where the platform has folders. */
-export const desktopJoin = (folder: string, name: string) => (desktop() ? `${folder}/${name}` : folder)
-
-/** Where an export ends up, in words. */
-export const exportFolderLabel = (folder: string, name: string) =>
-    desktop() ? `${folder}/${name}` : folder
-
-/** Writes an export's files into a folder of its own, named after the prop. */
-export function writeExportFiles(
-    folder: string,
-    name: string,
-    files: readonly {name: string; bytes: Uint8Array}[],
-): Promise<void> {
-    return writeFilesTo(desktop() ? `${folder}/${name}` : folder, files)
-}
-
-/**
- * Which of an export's files are already in its folder. A browser downloads each
- * file afresh, so it never replaces one.
- */
-export async function existingExportFiles(folder: string, name: string, names: readonly string[]): Promise<string[]> {
-    const app = exports()
-
-    return app ? app.ExistingFiles(`${folder}/${name}`, [...names]) : []
+    return (await app.ChooseFolder(title, start)) || null
 }
 
 /** Opens a folder in the file manager. A browser has none, so it does nothing. */
 export async function showFolder(folder: string): Promise<void> {
     await desktop()?.ShowFolder(folder)
-}
-
-/** Writes files straight into a folder, as a batch does. */
-export async function writeFilesTo(
-    folder: string,
-    files: readonly {name: string; bytes: Uint8Array}[],
-): Promise<void> {
-    const app = exports()
-
-    if (!app) {
-        for (const file of files) {
-            await writeWithBrowser(file.name, file.bytes, 'application/octet-stream')
-        }
-
-        return
-    }
-
-    await app.WriteFiles(
-        folder,
-        files.map((file) => ({name: file.name, contents: [...file.bytes]})),
-    )
 }
 
 function openWithBrowser(): Promise<{path: string; text: string} | null> {

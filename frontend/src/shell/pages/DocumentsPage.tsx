@@ -42,6 +42,15 @@ const dateLabel = (iso: string | null): string | null => {
 const sizeLabel = (bytes: number): string =>
     bytes < 1024 ? `${bytes} bytes` : bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
+/** What features offer to do with the picked or ticked documents, such as Export. */
+function FeatureActions({ids}: {ids: readonly string[]}) {
+    return (
+        <>
+            {features().map(({id, DocumentActions}) => (DocumentActions ? <DocumentActions key={id} ids={ids} /> : null))}
+        </>
+    )
+}
+
 /** How many tiles sit across the grid, so Up and Down move by a row. */
 function columnsOf(grid: Element | null): number {
     if (!grid) {
@@ -155,6 +164,7 @@ function Details({document, editing, request}: {document: SavedDocument; editing
                     <button type="button" className="button button--primary" disabled={!readable} onClick={() => void open(document.id)}>
                         Open
                     </button>
+                    {readable ? <FeatureActions ids={[document.id]} /> : null}
                 </div>
                 <div className="props-page__more-actions">
                     <button type="button" className="button" disabled={!readable} onClick={() => void copy(document.id)}>
@@ -197,6 +207,7 @@ function TickedDetails({ids, onClear}: {ids: readonly string[]; onClear(): void}
             <p className="dialog__hint">Ctrl-click to tick or untick one more, Shift-click for a run. Esc clears the ticks.</p>
             <div className="props-page__actions">
                 <div className="props-page__main-actions">
+                    <FeatureActions ids={ids} />
                     <button
                         type="button"
                         className="button"

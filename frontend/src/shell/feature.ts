@@ -46,6 +46,8 @@ export interface Feature {
     readonly HomeEmpty?: ComponentType
     /** More about a saved document, beside the library page's list, as dt and dd pairs. */
     readonly DocumentFacts?: ComponentType<{readonly document: SavedDocument}>
+    /** Buttons for the picked document, or every ticked one, on the library page. */
+    readonly DocumentActions?: ComponentType<{readonly ids: readonly string[]}>
 }
 
 let registered: readonly Feature[] = []

@@ -8,7 +8,8 @@ const UNSAFE = new Set('\\/:*?"<>|')
 /** A name made safe for a file on every system, or `fallback` when nothing of it is left. */
 export function safeFileName(name: string, fallback: string): string {
     const kept = [...name].map((character) => (UNSAFE.has(character) || character.charCodeAt(0) < 32 ? ' ' : character)).join('')
-    const safe = kept.replace(/\s+/g, ' ').trim().replace(/^\.+/, '')
+    // Dots that start a name hide a file on a Mac, and the space they leave goes too.
+    const safe = kept.replace(/\s+/g, ' ').trim().replace(/^\.+/, '').trim()
 
     return safe || fallback
 }

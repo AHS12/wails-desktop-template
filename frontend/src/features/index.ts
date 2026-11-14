@@ -5,13 +5,16 @@
  * one: docs/removing-features.md has the steps for each.
  */
 
+import {NOTE_FORMATS} from '../example/note-export'
 import {TOURS} from '../example/tours'
 import type {Feature} from '../shell/feature'
 import {backup} from './backup'
+import {exporting} from './export'
 import {report} from './report'
 import {tour} from './tour'
 
 export const FEATURES: readonly Feature[] = [
+    exporting(NOTE_FORMATS),
     backup,
     report,
     tour(TOURS),
