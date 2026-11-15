@@ -17,7 +17,7 @@ import {HomePage} from '../shell/pages/HomePage'
 import {forgetOldRemovedDocuments} from '../platform/documents'
 import {hasUnsavedChanges, isHomePage, useDocumentStore} from '../store/document-store'
 import {setUnsaved} from '../platform/draft'
-import {setCloseToTray, setMinimiseToTray} from '../platform/window'
+import {hasTray, setCloseToTray, setMinimiseToTray} from '../platform/window'
 import {confirmClose, onCloseRequested} from '../platform/close-guard'
 import {cancelUpdateInstall} from '../platform/update'
 import {settingNumber, settingValue, uiScale, useSettingsStore} from '../store/settings-store'
@@ -139,8 +139,8 @@ export function App() {
 
         // Go has to know before a button is pressed, so it isn't asked then.
         const applyWindowButtons = () => {
-            void setCloseToTray(settingValue('closeButton') === 'tray')?.catch(() => undefined)
-            void setMinimiseToTray(settingValue('minimiseButton') === 'tray')?.catch(() => undefined)
+            void setCloseToTray(hasTray() && settingValue('closeButton') === 'tray')?.catch(() => undefined)
+            void setMinimiseToTray(hasTray() && settingValue('minimiseButton') === 'tray')?.catch(() => undefined)
         }
 
         const unsubscribe = useSettingsStore.subscribe((state, previous) => {

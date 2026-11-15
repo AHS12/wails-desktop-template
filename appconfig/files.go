@@ -19,6 +19,7 @@ var (
 	description Field = func(c Config) string { return c.Description }
 	copyright   Field = func(c Config) string { return c.Copyright }
 	version     Field = func(c Config) string { return c.Version }
+	repository  Field = func(c Config) string { return c.Repository }
 )
 
 // Rule is one place outside app.config.json that has to hold a value from it.
@@ -50,6 +51,20 @@ var Rules = []Rule{
 	rule("build/config.yml", `copyright: "([^"]*)"`, copyright, "the copyright"),
 	rule("build/config.yml", `comments: "([^"]*)"`, description, "the comments"),
 	rule("build/config.yml", `\n  version: "([^"]*)"`, version, "the version"),
+
+	rule("build/linux/nfpm/nfpm.yaml", `(?m)^name: "([^"]*)"`, id, "the package name"),
+	rule("build/linux/nfpm/nfpm.yaml", `(?m)^version: "([^"]*)"`, version, "the version"),
+	rule("build/linux/nfpm/nfpm.yaml", `(?m)^description: "([^"]*)"`, description, "the description"),
+	rule("build/linux/nfpm/nfpm.yaml", `(?m)^vendor: "([^"]*)"`, company, "the vendor"),
+	rule("build/linux/nfpm/nfpm.yaml", `(?m)^homepage: "https://github.com/([^"]*)"`, repository, "the homepage"),
+	rule("build/linux/nfpm/nfpm.yaml", `"/usr/bin/([^"]*)"`, id, "the program"),
+	rule("build/linux/nfpm/nfpm.yaml", `"/usr/share/applications/([^"]*)\.desktop"`, bundleID, "the menu entry"),
+	// The menu entry, installed as /usr/share/applications/<bundle id>.desktop.
+	rule("build/linux/app.desktop", `(?m)^Name=(.*)$`, name, "the name"),
+	rule("build/linux/app.desktop", `(?m)^Comment=(.*)$`, description, "the description"),
+	rule("build/linux/app.desktop", `(?m)^Exec=/usr/bin/(.*)$`, id, "the program"),
+	rule("build/linux/app.desktop", `(?m)^Icon=(.*)$`, id, "the icon"),
+	rule("build/linux/app.desktop", `(?m)^StartupWMClass=(.*)$`, bundleID, "the window class"),
 
 	rule("build/windows/info.json", `"file_version": "([^"]*)"`, version, "the file version"),
 	rule("build/windows/info.json", `"product_version": "([^"]*)"`, version, "the product version"),

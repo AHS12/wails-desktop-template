@@ -101,6 +101,18 @@ func (a *App) CheckForUpdate(current string) (UpdateInfo, error) {
 			asset = findAsset(release, macUpdateName(info.Version))
 			info.CanInstall, info.ManualReason = a.macCanInstall(asset)
 		}
+	case "linux":
+		// The .deb says an update is out. Only an AppImage replaces itself; a package
+		// belongs to the system's package manager.
+		asset = nil
+		if info.Available {
+			if image := runningAppImage(); image != "" {
+				asset = findAsset(release, appImageUpdateName(info.Version))
+				info.CanInstall, info.ManualReason = a.appImageCanInstall(asset, image)
+			} else {
+				info.ManualReason = manualPackageManager
+			}
+		}
 	}
 
 	a.mu.Lock()
@@ -139,7 +151,7 @@ func (a *App) DownloadUpdate() error {
 		a.mu.Unlock()
 	}()
 
-	if goruntime.GOOS == "darwin" {
+	if updatesThroughWails() {
 		a.mu.Lock()
 		version, current := a.updateVersion, a.runningVersion
 		a.mu.Unlock()
@@ -179,7 +191,7 @@ func (a *App) DownloadUpdate() error {
 // has closed. The frontend then closes the window through the close guard, so
 // unsaved work is asked about first, and nothing starts if the user stays.
 func (a *App) InstallUpdateOnClose() error {
-	if goruntime.GOOS == "darwin" {
+	if updatesThroughWails() {
 		a.mu.Lock()
 		defer a.mu.Unlock()
 
@@ -225,8 +237,8 @@ func (a *App) runPendingInstaller() error {
 	a.installOnClose = false
 	a.mu.Unlock()
 
-	// A Mac's update started when the quit was agreed; see startMacUpdate.
-	if !install || goruntime.GOOS == "darwin" {
+	// A Mac's or AppImage's update started when the quit was agreed; see startMacUpdate.
+	if !install || updatesThroughWails() {
 		return nil
 	}
 
@@ -379,6 +391,8 @@ func updateAssetName(goos string, version string) string {
 		return fmt.Sprintf("%s-%s-windows-amd64-setup.exe", appconfig.Current().ID, version)
 	case "darwin":
 		return fmt.Sprintf("%s-%s-mac-universal.dmg", appconfig.Current().ID, version)
+	case "linux":
+		return fmt.Sprintf("%s-%s-linux-amd64.deb", appconfig.Current().ID, version)
 	}
 
 	return ""

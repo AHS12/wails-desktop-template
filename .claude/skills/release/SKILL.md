@@ -45,6 +45,8 @@ Run `make check`, then build and open the installer on whatever you can, with `m
 2. Publish a GitHub Release tagged `vX.Y.Z`, or run the **Release Installers** workflow under
    Actions with the tag and platform.
 3. The tag has to match the version, or the run stops before building.
-4. When the run ends, check that the Windows installer, the Mac DMG and the Mac zip are all
-   attached. The app finds updates by those file names; a test fails if the workflow and
-   `backend/update.go` disagree.
+4. When the run ends, check that every file is attached: the Windows installer, the Mac DMG
+   and zip, and the Linux .deb, .rpm, Arch package and AppImage. The app finds updates by
+   those file names; a test fails if the workflow and the backend disagree.
+5. Before releasing Linux changes, run the **Linux Test Build** workflow and look at its
+   screenshots: CI is how Linux gets checked.

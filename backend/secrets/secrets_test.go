@@ -32,3 +32,15 @@ func TestASecretComesBackAndThenIsForgotten(t *testing.T) {
 		t.Fatalf("forgetting twice: %v", err)
 	}
 }
+
+func TestALinuxKeychainFailureSaysWhatToInstall(t *testing.T) {
+	cause := errors.New("The name org.freedesktop.secrets was not provided by any .service files")
+
+	if err := explain(cause, "linux"); !errors.Is(err, ErrNoKeychain) {
+		t.Errorf("on Linux, got %v", err)
+	}
+
+	if err := explain(cause, "windows"); err != cause {
+		t.Errorf("elsewhere the system's own words should stay, got %v", err)
+	}
+}

@@ -71,6 +71,8 @@ including anything under the GPL or a paid license.
 | `frontend/src/shell` | The menu bar, palette, settings, pages and the feature registry |
 | `frontend/src/features` | Optional features |
 | `frontend/src/example` | The Notes example |
+| `build` | Each system's build files: Windows installer, Mac app, Linux packages |
+| `.github/workflows` | Release builds for every system, and the Linux test build |
 | `tools/appinfo` | Renames the app, sets the version, checks the build files |
 
 ## License

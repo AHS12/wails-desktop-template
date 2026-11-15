@@ -10,9 +10,9 @@ make version V=0.2.0
 ```
 
 That writes the version into `appconfig/app.config.json` and every build file that holds
-it: `build/config.yml`, the Windows `info.json`, manifest and installer script, and the
-Mac `Info.plist` files. The frontend and Go read it from `app.config.json`. `make check`
-fails if any of them drift.
+it: `build/config.yml`, the Windows `info.json`, manifest and installer script, the Mac
+`Info.plist` files, and the Linux `nfpm.yaml`. The frontend and Go read it from
+`app.config.json`. `make check` fails if any of them drift.
 
 ## 2. Write the changelog
 
@@ -35,6 +35,10 @@ the app's version.
 Run `make check`, then build an installer and try it with `make release` (a Windows
 installer on Windows, a DMG on a Mac).
 
+For Linux, run the **Linux Test Build** workflow under Actions. It builds the four Linux
+files, installs each on a clean Ubuntu, Debian, Fedora and Arch system, starts the app,
+and keeps a screenshot and the log from each. Look at the screenshots before releasing.
+
 ## 4. Publish
 
 1. Commit on `dev`, push, and merge `dev` into `main`.
@@ -42,10 +46,20 @@ installer on Windows, a DMG on a Mac).
    Actions with the tag and the platforms. The workflow makes the release from the chosen
    branch if it doesn't exist yet, and otherwise rebuilds and replaces its files.
 3. The tag has to match `app.config.json`, or the run stops before building.
-4. When it finishes, check the release has the Windows installer, the Mac DMG and the Mac
-   zip. The app finds updates by these names, `<id>-<version>-windows-amd64-setup.exe`,
-   `<id>-<version>-mac-universal.dmg` and `<id>-<version>-mac-universal.zip`, and a test
-   fails if the workflow and the app disagree. A Mac updates itself from the zip.
+4. When it finishes, check the release has every file. The app finds updates by these
+   names, and a test fails if the workflow and the app disagree:
+
+   | File | For |
+   |---|---|
+   | `<id>-<version>-windows-amd64-setup.exe` | Windows, to install and to update |
+   | `<id>-<version>-mac-universal.dmg` | Mac, to install; says an update is out |
+   | `<id>-<version>-mac-universal.zip` | Mac, to update itself from |
+   | `<id>-<version>-linux-amd64.deb` | Ubuntu and Debian; says an update is out |
+   | `<id>-<version>-linux-x86_64.rpm` | Fedora, RHEL, openSUSE |
+   | `<id>-<version>-linux-x86_64.pkg.tar.zst` | Arch |
+   | `<id>-<version>-linux-x86_64.AppImage` | Any distribution, and what an AppImage updates itself from |
+
+   A .deb, .rpm or Arch package never replaces itself: the app shows the download page.
 
 ## Trying an update before publishing it
 
@@ -59,5 +73,7 @@ The builds aren't signed, so Windows SmartScreen and macOS Gatekeeper warn on fi
 launch. A Mac build is signed for that Mac only (ad-hoc). To sign properly, add a Windows
 code-signing certificate, and a Mac Developer ID with notarisation, to the release
 workflow; `build/windows/Taskfile.yml` and `build/darwin/Taskfile.yml` have `sign` tasks.
+The Linux packages aren't signed either; `build/linux/Taskfile.yml` can take the
+`sign:deb` and `sign:rpm` tasks from Wails' own Linux Taskfile once there's a PGP key.
 A Mac's update check and its keychain entry depend on the bundle id, so keep it once
 people have the app.

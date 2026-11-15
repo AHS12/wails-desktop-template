@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=wails-desktop-template
+Comment=A starter for desktop apps that feel like desktop apps.
+Exec=/usr/bin/wails-desktop-template
+Icon=wails-desktop-template
+Terminal=false
+Categories=Utility;
+StartupNotify=true
+StartupWMClass=com.ahs12.wails-desktop-template
