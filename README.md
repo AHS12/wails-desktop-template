@@ -20,8 +20,9 @@ The example app keeps notes, and is the part a new app replaces.
 | **Library page** | Search, sort, groups by date, ticking several at once, keyboard moves, and pictures served from disk |
 | **Backup** *(optional)* | To a .zip anywhere, to a folder by itself once a day, and to cloud storage the person already has (S3, R2, B2, Wasabi and others), with keys kept in the system's keychain. Restoring shows what's in a backup first and never replaces anything |
 | **Export** *(optional)* | One document or many, in formats the app names, with progress and a question before replacing files |
-| **Updates** | Checks GitHub releases weekly, downloads with a checksum, and installs on close. Windows through the installer, a Mac through the Wails updater |
-| **A real window** | Frameless on Windows with its own buttons, an inset title bar on a Mac, remembered size and place, one copy at a time, and closing or minimising to the tray |
+| **Updates** | Checks GitHub releases weekly, downloads with a checksum, and installs on close. Windows through the installer, a Mac and a Linux AppImage through the Wails updater; a Linux package points to the download page |
+| **A real window** | Frameless on Windows with its own buttons, an inset title bar on a Mac, the system's title bar on Linux, remembered size and place, one copy at a time, and closing or minimising to the tray (not on Linux, where GNOME shows no tray) |
+| **Linux packages** | A .deb, .rpm, Arch package and AppImage, built and released by CI, and a test workflow that installs each on a clean Ubuntu, Debian, Fedora and Arch system, starts it and keeps a screenshot |
 | **Settings** | A settings window with search, built from a list of settings; rebindable shortcuts; light and dark themes; interface scale |
 | **Getting around** | A command palette for every command and setting, menus in the title bar, a status bar, What's new after an update |
 | **Report a problem** *(optional)* | GitHub's issue forms asked in the app, with the version and system filled in |
@@ -49,7 +50,8 @@ The example app keeps notes, and is the part a new app replaces.
 4. Take out what you don't need, with [Removing a feature](docs/removing-features.md).
 5. Replace the icon: `build/appicon.png` (1024×1024), `frontend/public/favicon.svg`, and
    `backend/tray-mac.png` for the Mac's menu bar. `wails3 task common:generate:icons` makes the
-   Windows `.ico` and Mac `.icns` from the PNG.
+   Windows `.ico` and Mac `.icns` from the PNG. The Linux build draws its icons from
+   `build/appicon.svg`, so replace that too.
 
 ## Build from source
 
@@ -71,6 +73,11 @@ make release    # The installer this computer can make
 Run `make` to list every task. `make installer` builds the Windows installer (needs NSIS),
 and `make dmg` the Mac disk image and update zip (needs a Mac).
 
+On Linux, the app builds against GTK 4 and WebKitGTK 6 (Ubuntu 24.04, Debian 13, Fedora 40 or
+later). On Debian and Ubuntu, install `build-essential pkg-config libgtk-4-dev
+libwebkitgtk-6.0-dev librsvg2-bin`; then `wails3 task linux:package` makes the .deb, .rpm
+and Arch package, and `wails3 task linux:appimage` the AppImage.
+
 ## How it's built
 
 Go handles files, native dialogs, the window, the tray, backups, updates and secrets.
@@ -78,6 +85,7 @@ Documents are bytes to Go: every decision about them is made in TypeScript.
 
 ```
 appconfig/              who the app is: name, id, bundle id, repository, version
+build/                  each system's build files: Windows installer, Mac app, Linux packages
 backend/                the core service: window, tray, close guard, dialogs, settings, draft, updates
 backend/documents/      the library, its pictures and Recently removed
 backend/backup/         backups to a file, a folder and the cloud      (optional)
@@ -95,12 +103,12 @@ frontend/src/example/   the Notes example, which a new app replaces
 ## Releasing
 
 `make version V=0.2.0`, a line in `CHANGELOG.md`, and a GitHub release tagged `v0.2.0`.
-GitHub builds the Windows installer and the Mac DMG and zip. [Releasing](docs/releasing.md)
-has the steps.
+GitHub builds the Windows installer, the Mac DMG and zip, and the Linux .deb, .rpm, Arch
+package and AppImage. [Releasing](docs/releasing.md) has the steps.
 
-Windows and macOS only for now. The builds aren't signed, so the first launch warns: on
-Windows choose **More info > Run anyway**, and on a Mac open it from
-**System Settings > Privacy & Security**. [Releasing](docs/releasing.md#signing) covers
+The builds aren't signed, so the first launch warns: on Windows choose **More info > Run
+anyway**, and on a Mac open it from **System Settings > Privacy & Security**. A Linux
+AppImage uses the system's graphics libraries and `bubblewrap`, as most desktops have. [Releasing](docs/releasing.md#signing) covers
 signing.
 
 ## License

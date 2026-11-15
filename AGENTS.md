@@ -1,7 +1,8 @@
 # wails-desktop-template
 
-A starter for desktop apps: Wails 3 (Go) for the window, files, tray, backups and updates;
-React and TypeScript for everything else. The example app keeps notes.
+A starter for desktop apps on Windows, macOS and Linux: Wails 3 (Go) for the window, files,
+tray, backups and updates; React and TypeScript for everything else. The example app keeps
+notes.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Its rules apply to you, and this file only
 adds what an agent needs on top of them.
@@ -49,6 +50,10 @@ Commit or push only when asked. Work on `dev`, and don't touch `main`.
   steps, and they're tested.
 - `frontend/src/example` is the Notes example: the note type, its editor, export formats
   and tours. `documentType` in `store/document-store.ts` picks the document type.
+- `build/` holds each system's build files; [build/README.md](build/README.md) says which
+  are written from `app.config.json`. Linux packages (deb, rpm, Arch, AppImage) come from
+  `build/linux`, and the **Linux Test Build** workflow installs and starts each one on a
+  pull request.
 - The document store is the source of truth for the document in hand. Documents are
   immutable values: an unchanged document keeps the same object, so "unsaved" is an
   identity check.
@@ -66,6 +71,15 @@ Commit or push only when asked. Work on `dev`, and don't touch `main`.
 - **Long work:** use `afterPaint()` or `yieldIfBusy()` from `core/yield.ts`, so progress
   can draw before slow work blocks the page.
 - **Licensing:** add no downloaded assets or copied code.
+- **Systems:** Go files ending in `_windows.go`, `_darwin.go` or `_linux.go` build only on
+  that system, so code every system calls goes in a file without one. On Linux the window
+  keeps the system's title bar and there is no tray (GNOME shows none); `isLinux()` and
+  `hasTray()` in `platform/window.ts`, and `hasTray()` in `backend/tray.go`, decide it.
+- **Updates:** the app finds updates by the release file names in `backend/update.go`,
+  `update_mac.go` and `update_appimage.go`. Change them only with
+  `.github/workflows/release.yml`; a test compares the two.
+- **Scripts:** a shell script committed from Windows loses its executable bit, so
+  workflows run scripts through `bash` rather than directly.
 
 ## Style
 

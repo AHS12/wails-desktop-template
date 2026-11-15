@@ -19,7 +19,7 @@ import {SETTING_SPECS, type SettingPage, type SettingSpec} from '../core/setting
 import {chooseFolder} from '../platform/desktop'
 import {hasDesktopStorage, libraryInfo, openLibraryFolder, type LibraryInfo} from '../platform/settings'
 import {canCheckForUpdates, type ManualReason} from '../platform/update'
-import {openLink} from '../platform/window'
+import {hasTray, openLink} from '../platform/window'
 import {documentType, useDocumentStore} from '../store/document-store'
 import {useSettingsStore} from '../store/settings-store'
 import {useUiStore} from '../store/ui-store'
@@ -287,6 +287,7 @@ const MANUAL_HELP: Record<ManualReason | 'none', string> = {
     'move-to-applications':
         `To have ${APP.name} update itself, drag it into your Applications folder and open it from there. For now, get this version from the download page.`,
     'read-only': `${APP.name} can't change the folder it's in, so get this version from the download page and install it over this one.`,
+    'package-manager': 'Get the .deb, .rpm or Arch package from the download page and install it the way you installed this one. Your work stays as it is.',
 }
 
 function UpdateRow() {
@@ -425,7 +426,7 @@ export function SettingsDialog() {
     }, [page === null])
 
     const found = useMemo(
-        () => SETTING_SPECS.filter((spec) => matches(needle, spec.label, spec.help, 'keywords' in spec ? spec.keywords : undefined, spec.page)),
+        () => SETTING_SPECS.filter((spec) => (!('needsTray' in spec) || hasTray()) && matches(needle, spec.label, spec.help, 'keywords' in spec ? spec.keywords : undefined, spec.page)),
         [needle],
     )
 
@@ -506,7 +507,7 @@ export function SettingsDialog() {
                         <AboutPage />
                     ) : (
                         (SETTING_SPECS as readonly SettingSpec[])
-                            .filter((spec) => spec.page === page)
+                            .filter((spec) => spec.page === page && (!('needsTray' in spec) || hasTray()))
                             .map((spec) => <SpecRow key={spec.key} spec={spec} />)
                     )}
                     {needle ? null : rows.map(({Row}, index) => <Row key={index} />)}

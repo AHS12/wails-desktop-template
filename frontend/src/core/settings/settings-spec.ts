@@ -20,6 +20,8 @@ interface Common {
     readonly label: string
     readonly help: string
     readonly keywords?: string
+    /** Only offered where the system shows tray icons, which GNOME doesn't. */
+    readonly needsTray?: boolean
 }
 
 export interface ToggleSetting extends Common {
@@ -110,6 +112,7 @@ export const SETTING_SPECS = [
         kind: 'choice',
         label: 'Close button',
         help: 'What happens when you close the window.',
+        needsTray: true,
         keywords: 'tray taskbar background hide exit quit system',
         default: 'quit',
         options: [
@@ -127,6 +130,7 @@ export const SETTING_SPECS = [
         kind: 'choice',
         label: 'Minimise button',
         help: 'What happens when you minimise the window.',
+        needsTray: true,
         keywords: 'tray taskbar background hide minimize system',
         default: 'taskbar',
         options: [
