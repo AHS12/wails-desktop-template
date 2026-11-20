@@ -22,7 +22,8 @@ The example app keeps notes, and is the part a new app replaces.
 | **Export** *(optional)* | One document or many, in formats the app names, with progress and a question before replacing files |
 | **Updates** | Checks GitHub releases weekly, downloads with a checksum, and installs on close. Windows through the installer, a Mac and a Linux AppImage through the Wails updater; a Linux package points to the download page |
 | **A real window** | Frameless on Windows with its own buttons, an inset title bar on a Mac, the system's title bar on Linux, remembered size and place, one copy at a time, and closing or minimising to the tray (not on Linux, where GNOME shows no tray) |
-| **Linux packages** | A .deb, .rpm, Arch package and AppImage, built and released by CI, and a test workflow that installs each on a clean Ubuntu, Debian, Fedora and Arch system, starts it and keeps a screenshot |
+| **Linux packages** | A .deb, .rpm, Arch package and AppImage, built and released by CI |
+| **Checked on every system** | Each pull request runs the tests on Windows, macOS and Linux, then builds the app for each, installs it on a clean machine (Ubuntu, Debian, Fedora and Arch for Linux; Apple silicon and Intel for a Mac), starts it and keeps a screenshot |
 | **Settings** | A settings window with search, built from a list of settings; rebindable shortcuts; light and dark themes; interface scale |
 | **Getting around** | A command palette for every command and setting, menus in the title bar, a status bar, What's new after an update |
 | **Report a problem** *(optional)* | GitHub's issue forms asked in the app, with the version and system filled in |

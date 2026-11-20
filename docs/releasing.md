@@ -35,9 +35,18 @@ the app's version.
 Run `make check`, then build an installer and try it with `make release` (a Windows
 installer on Windows, a DMG on a Mac).
 
-For Linux, run the **Linux Test Build** workflow under Actions. It builds the four Linux
-files, installs each on a clean Ubuntu, Debian, Fedora and Arch system, starts the app,
-and keeps a screenshot and the log from each. Look at the screenshots before releasing.
+Every pull request runs **CI** under Actions: the frontend's types, lint and tests, and
+the Go tests on Windows, macOS and Linux. Once they pass, it starts each system's test
+build, which can also be run by hand:
+
+- **Windows Test Build** installs the installer silently on a clean runner, starts the
+  app, takes a screenshot and uninstalls it.
+- **macOS Test Build** installs the universal app from the disk image on Apple silicon
+  and on Intel, starts it and takes a screenshot.
+- **Linux Test Build** installs the four Linux files on a clean Ubuntu, Debian, Fedora and
+  Arch system, starts the app, and keeps a screenshot and the log from each.
+
+Look at the screenshots before releasing.
 
 ## 4. Publish
 
